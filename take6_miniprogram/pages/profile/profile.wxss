@@ -1,0 +1,370 @@
+/* 我的页面样式 */
+.container {
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #0f172a 0%, #1e293b 100%);
+  position: relative;
+}
+
+/* 顶部标题 */
+.header {
+  padding: 40rpx 32rpx 24rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 10;
+}
+
+.header-left {
+  flex: 1;
+}
+
+.section-tag {
+  font-size: 24rpx;
+  color: #10b981;
+  font-weight: 600;
+  display: block;
+}
+
+.page-title {
+  font-size: 36rpx;
+  color: #ffffff;
+  font-weight: 600;
+  margin-top: 8rpx;
+  display: block;
+}
+
+.logout-btn {
+  font-size: 22rpx;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+/* 背景图 */
+.bg-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 320rpx;
+  overflow: hidden;
+}
+
+.bg-img {
+  width: 100%;
+  height: 100%;
+  opacity: 0.7;
+}
+
+.bg-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, rgba(30, 41, 59, 0.8) 50%, #1e293b 100%);
+}
+
+/* 主体内容 */
+.content {
+  position: relative;
+  z-index: 10;
+  padding: 256rpx 32rpx 120rpx;
+}
+
+/* 头像卡片 */
+.avatar-card {
+  background: rgba(30, 41, 59, 0.9);
+  border: 1rpx solid #334155;
+  border-radius: 48rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+}
+
+.avatar-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 32rpx;
+}
+
+.avatar-wrapper {
+  position: relative;
+}
+
+.avatar {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 50%;
+  background: #334155;
+}
+
+.wechat-badge {
+  position: absolute;
+  bottom: -4rpx;
+  right: -4rpx;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: #10b981;
+  color: #0f172a;
+  font-size: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.user-info-section {
+  flex: 1;
+}
+
+.user-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.user-name {
+  font-size: 28rpx;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.edit-btn {
+  font-size: 22rpx;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.user-desc {
+  font-size: 22rpx;
+  color: #94a3b8;
+  margin-top: 8rpx;
+  display: block;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.stat-label {
+  font-size: 22rpx;
+  color: #94a3b8;
+}
+
+.stat-value {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.stat-value.win-rate {
+  color: #10b981;
+}
+
+.stat-value.avg-score {
+  color: #fbbf24;
+}
+
+.stat-value.max-streak {
+  color: #e2e8f0;
+}
+
+/* 战绩概览 */
+.stats-card {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1rpx solid #334155;
+  border-radius: 32rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.card-title {
+  font-size: 28rpx;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.view-all-btn {
+  font-size: 22rpx;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.result-legend {
+  display: flex;
+  gap: 8rpx;
+  margin-bottom: 16rpx;
+}
+
+.legend-item {
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  font-size: 20rpx;
+}
+
+.legend-item.win {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.legend-item.draw {
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+}
+
+.legend-item.lose {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.result-dots {
+  display: flex;
+  gap: 8rpx;
+  margin-bottom: 16rpx;
+}
+
+.result-dot {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 50%;
+  border: 1rpx solid;
+}
+
+.result-dot.win {
+  background: rgba(16, 185, 129, 0.4);
+  border-color: #10b981;
+}
+
+.result-dot.draw {
+  background: rgba(251, 191, 36, 0.4);
+  border-color: #fbbf24;
+}
+
+.result-dot.lose {
+  background: rgba(239, 68, 68, 0.4);
+  border-color: #ef4444;
+}
+
+.result-summary {
+  font-size: 22rpx;
+  color: #94a3b8;
+}
+
+.win-text {
+  color: #10b981;
+}
+
+.draw-text {
+  color: #fbbf24;
+}
+
+.lose-text {
+  color: #ef4444;
+}
+
+/* 详细统计 */
+.detail-stats-card {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1rpx solid #334155;
+  border-radius: 32rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12rpx 0;
+  font-size: 22rpx;
+  color: #e2e8f0;
+  border-bottom: 1rpx solid #1e293b;
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-value {
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+.detail-value.max-bull {
+  color: #fbbf24;
+}
+
+.detail-value.min-bull {
+  color: #10b981;
+}
+
+/* 设置与反馈 */
+.settings-card {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1rpx solid #334155;
+  border-radius: 32rpx;
+  overflow: hidden;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx;
+  border-bottom: 1rpx solid #1e293b;
+  font-size: 24rpx;
+  color: #e2e8f0;
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+}
+
+.setting-left {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.setting-icon {
+  font-size: 32rpx;
+}
+
+.setting-status {
+  font-size: 22rpx;
+  color: #10b981;
+}
+
+.setting-arrow {
+  font-size: 32rpx;
+  color: #64748b;
+}
+
+.setting-version {
+  font-size: 22rpx;
+  color: #94a3b8;
+}
+

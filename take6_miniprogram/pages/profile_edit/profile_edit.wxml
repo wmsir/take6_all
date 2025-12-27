@@ -1,0 +1,35 @@
+<view class="container">
+  <view class="form-group">
+    <view class="form-item avatar-item">
+      <text class="label">头像</text>
+      <button class="avatar-wrapper" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+        <image class="avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+        <view class="edit-icon">📷</view>
+      </button>
+    </view>
+
+    <view class="form-item">
+      <text class="label">昵称</text>
+      <input type="nickname" class="input" placeholder="请输入昵称" value="{{userInfo.nickname}}" bindinput="onNicknameInput" bind:change="onNicknameChange"/>
+    </view>
+
+    <view class="form-item">
+      <text class="label">手机号</text>
+      <input type="number" class="input" placeholder="请输入手机号" value="{{userInfo.phone}}" bindinput="onPhoneInput"/>
+    </view>
+
+    <view class="form-item readonly">
+      <text class="label">用户ID</text>
+      <text class="readonly-text">{{userInfo.id}}</text>
+    </view>
+
+    <view class="form-item readonly">
+      <text class="label">注册时间</text>
+      <text class="readonly-text">{{userInfo.registerTimeFormatted}}</text>
+    </view>
+  </view>
+
+  <button class="save-btn" bindtap="handleSave" disabled="{{loading}}">
+    {{loading ? '保存中...' : '保存'}}
+  </button>
+</view>

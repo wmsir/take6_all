@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>Take6 小程序原型 - Index</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 min-h-screen text-slate-100">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-semibold mb-6">Take6 小程序高保真原型总览</h1>
+    <p class="text-sm text-slate-300 mb-6">
+      所有页面以 iPhone 15 Pro 尺寸 iframe 平铺展示，便于开发与评审。将其它 HTML 文件放在同一目录下即可正常加载。
+    </p>
+
+    <div class="grid gap-8 lg:grid-cols-3 md:grid-cols-2 grid-cols-1">
+      <!-- Onboarding -->
+      <div>
+        <h2 class="text-lg font-medium mb-2">Onboarding / 登录</h2>
+        <div class="border border-slate-700 rounded-xl overflow-hidden bg-black">
+          <iframe
+            src="onboarding.html"
+            title="Onboarding"
+            class="w-[393px] h-[852px] mx-auto block"
+          ></iframe>
+        </div>
+      </div>
+
+      <!-- Lobby -->
+      <div>
+        <h2 class="text-lg font-medium mb-2">大厅 / Lobby</h2>
+        <div class="border border-slate-700 rounded-xl overflow-hidden bg-black">
+          <iframe
+            src="lobby.html"
+            title="Lobby"
+            class="w-[393px] h-[852px] mx-auto block"
+          ></iframe>
+        </div>
+      </div>
+
+      <!-- Room -->
+      <div>
+        <h2 class="text-lg font-medium mb-2">房间 / Room</h2>
+        <div class="border border-slate-700 rounded-xl overflow-hidden bg-black">
+          <iframe
+            src="room.html"
+            title="Room"
+            class="w-[393px] h-[852px] mx-auto block"
+          ></iframe>
+        </div>
+      </div>
+
+      <!-- Game -->
+      <div>
+        <h2 class="text-lg font-medium mb-2">对局 / Game</h2>
+        <div class="border border-slate-700 rounded-xl overflow-hidden bg-black">
+          <iframe
+            src="game.html"
+            title="Game"
+            class="w-[393px] h-[852px] mx-auto block"
+          ></iframe>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div>
+        <h2 class="text-lg font-medium mb-2">结算 / Result</h2>
+        <div class="border border-slate-700 rounded-xl overflow-hidden bg-black">
+          <iframe
+            src="result.html"
+            title="Result"
+            class="w-[393px] h-[852px] mx-auto block"
+          ></iframe>
+        </div>
+      </div>
+
+      <!-- Profile -->
+      <div>
+        <h2 class="text-lg font-medium mb-2">我的 / Profile</h2>
+        <div class="border border-slate-700 rounded-xl overflow-hidden bg-black">
+          <iframe
+            src="profile.html"
+            title="Profile"
+            class="w-[393px] h-[852px] mx-auto block"
+          ></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+
+

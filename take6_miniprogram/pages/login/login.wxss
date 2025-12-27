@@ -1,0 +1,341 @@
+/* Onboarding / 登录页面样式 */
+.container {
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #0f172a 0%, #1e293b 100%);
+  position: relative;
+  padding-bottom: 120rpx;
+}
+
+/* 顶部标题 */
+.header {
+  padding: 40rpx 32rpx 20rpx;
+  position: relative;
+  z-index: 10;
+}
+
+.title-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.app-name {
+  font-size: 24rpx;
+  color: #10b981;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+}
+
+.page-title {
+  font-size: 36rpx;
+  color: #ffffff;
+  font-weight: 600;
+  margin-top: 8rpx;
+}
+
+/* 背景图 */
+.bg-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 400rpx;
+  overflow: hidden;
+}
+
+.bg-img {
+  width: 100%;
+  height: 100%;
+  opacity: 0.7;
+}
+
+.bg-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, rgba(30, 41, 59, 0.8) 50%, #1e293b 100%);
+}
+
+/* 主体内容 */
+.content {
+  position: relative;
+  z-index: 10;
+  padding: 320rpx 32rpx 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+/* 卡片通用样式 */
+.auth-card,
+.phone-card,
+.loading-card {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1rpx solid #334155;
+  border-radius: 32rpx;
+  padding: 32rpx;
+  backdrop-filter: blur(10rpx);
+}
+
+/* 欢迎区域 */
+.welcome-section {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  margin-bottom: 32rpx;
+}
+
+.avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background: #334155;
+}
+
+.welcome-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.welcome-title {
+  font-size: 28rpx;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.welcome-desc {
+  font-size: 22rpx;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+/* 微信登录按钮 */
+.wechat-btn {
+  width: 100%;
+  height: 88rpx;
+  background: #10b981;
+  border-radius: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  color: #0f172a;
+  font-size: 28rpx;
+  font-weight: 600;
+  border: none;
+  margin-bottom: 16rpx;
+}
+
+.wechat-btn[disabled] {
+  background: #475569;
+  color: #64748b;
+}
+
+.wechat-icon {
+  font-size: 32rpx;
+}
+
+/* 协议文本 */
+.agreement {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 22rpx;
+  line-height: 1.6;
+}
+
+.agreement-text {
+  color: #94a3b8;
+}
+
+.agreement-link {
+  color: #10b981;
+  text-decoration: underline;
+}
+
+/* 卡片头部 */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24rpx;
+}
+
+.card-title-section {
+  flex: 1;
+}
+
+.card-title {
+  font-size: 28rpx;
+  color: #ffffff;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.card-desc {
+  font-size: 22rpx;
+  color: #94a3b8;
+  display: block;
+}
+
+.recommend-tag {
+  font-size: 22rpx;
+  color: #10b981;
+  padding: 4rpx 12rpx;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 8rpx;
+}
+
+/* 手机号输入组 */
+.phone-input-group {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.country-select {
+  width: 160rpx;
+}
+
+.phone-input {
+  flex: 1;
+}
+
+.input-label {
+  display: block;
+  font-size: 22rpx;
+  color: #94a3b8;
+  margin-bottom: 8rpx;
+}
+
+.select-box {
+  height: 72rpx;
+  background: #1e293b;
+  border-radius: 22rpx;
+  padding: 0 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #ffffff;
+  font-size: 24rpx;
+}
+
+.arrow {
+  font-size: 20rpx;
+  color: #64748b;
+}
+
+.input {
+  width: 100%;
+  height: 72rpx;
+  background: #1e293b;
+  border-radius: 22rpx;
+  padding: 0 24rpx;
+  color: #e2e8f0;
+  font-size: 24rpx;
+}
+
+.code-btn {
+  height: 72rpx;
+  padding: 0 24rpx;
+  background: #334155;
+  border-radius: 22rpx;
+  color: #e2e8f0;
+  font-size: 22rpx;
+  border: none;
+  align-self: flex-end;
+  margin-top: 40rpx;
+}
+
+.code-btn[disabled] {
+  background: #1e293b;
+  color: #64748b;
+}
+
+.code-input {
+  margin-top: 24rpx;
+}
+
+/* 加载进度 */
+.loading-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.progress-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 22rpx;
+  color: #cbd5e1;
+}
+
+.progress-label {
+  color: #cbd5e1;
+}
+
+.progress-value {
+  color: #cbd5e1;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6rpx;
+  background: #1e293b;
+  border-radius: 3rpx;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #10b981;
+  border-radius: 3rpx;
+  transition: width 0.3s;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 22rpx;
+  color: #64748b;
+}
+
+.status-badge.connected {
+  color: #10b981;
+}
+
+.status-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: #64748b;
+}
+
+.status-badge.connected .status-dot {
+  background: #10b981;
+}
+
+/* 进入大厅按钮 */
+.enter-btn {
+  width: 100%;
+  height: 88rpx;
+  background: #10b981;
+  border-radius: 32rpx;
+  color: #0f172a;
+  font-size: 28rpx;
+  font-weight: 600;
+  border: none;
+  margin-top: 24rpx;
+}
+
+.enter-btn[disabled] {
+  background: #475569;
+  color: #64748b;
+}

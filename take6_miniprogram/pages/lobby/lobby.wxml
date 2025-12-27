@@ -1,0 +1,111 @@
+<!-- 大厅页面 -->
+<view class="container">
+  <!-- 顶部标题 -->
+  <view class="header">
+    <view class="header-left">
+      <!-- "TAKE6 大厅" Removed as requested -->
+    </view>
+    <view class="user-info">
+      <view class="score-badge">
+        <text class="score-label">牛头积分</text>
+        <text class="score-value">{{totalScore}}</text>
+      </view>
+      <image class="avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+    </view>
+  </view>
+
+  <!-- Banner Area -->
+  <view class="banner">
+    <image class="banner-img" src="/images/banner-bg.jpg" mode="aspectFill"></image>
+    <view class="banner-overlay"></view>
+    <view class="banner-content">
+      <view>
+        <text class="banner-tag">经典 10 回合 · 实时对战</text>
+        <view class="banner-title">和好友一起在线"吃牛"</view>
+        <view class="banner-desc">支持 2-10 人，推荐 4-6 人桌。低牛头者胜出。</view>
+      </view>
+      <view class="banner-features">
+        <view class="feature-item">
+          <text class="feature-icon">⚡</text>
+          <text>实时匹配</text>
+        </view>
+        <view class="feature-item">
+          <text class="feature-icon">🔒</text>
+          <text>好友私密房</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 功能入口 -->
+  <view class="action-grid">
+    <view class="action-card create" bindtap="handleCreateRoom">
+      <view class="action-header">
+        <view class="action-icon create-icon">+</view>
+        <text class="action-tag">房主创建</text>
+      </view>
+      <view class="action-text">
+        <text class="action-title">创建房间</text>
+        <text class="action-desc">自定义人数与结束规则</text>
+      </view>
+    </view>
+    <view class="action-card join" bindtap="handleShowJoinModal">
+      <view class="action-header">
+        <view class="action-icon join-icon">#</view>
+        <text class="action-tag">房间号进入</text>
+      </view>
+      <view class="action-text">
+        <text class="action-title">加入房间</text>
+        <text class="action-desc">输入房间号或点击好友邀请</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 输入房间号区域 -->
+  <view class="join-input-card">
+    <text class="input-label">通过房间号加入</text>
+    <view class="input-group">
+      <input class="room-input" placeholder="请输入 4-6 位房间号" maxlength="6" bindinput="onRoomCodeInput" value="{{roomCode}}" />
+      <button class="join-btn" bindtap="handleJoinByCode">加入</button>
+    </view>
+  </view>
+
+  <!-- 房间列表 -->
+  <view class="room-list-section">
+    <view class="section-header">
+      <text class="section-title">正在游戏的房间</text>
+      <text class="refresh-btn" bindtap="handleRefresh">↻ 刷新</text>
+    </view>
+
+    <scroll-view scroll-y class="room-list" wx:if="{{roomList.length > 0}}">
+      <view class="room-item" wx:for="{{roomList}}" wx:key="roomId" bindtap="handleJoinRoom"
+            data-room-id="{{item.roomId}}"
+            data-status="{{item.status}}"
+            data-need-password="{{item.needPassword}}">
+        <view class="room-left">
+          <text class="room-id">#{{item.roomId}}</text>
+          <view class="room-info">
+            <text class="room-name">{{item.roomName}}</text>
+            <text class="room-config">{{item.currentPlayers}}/{{item.maxPlayers}}人 · {{item.gameConfig}}</text>
+          </view>
+        </view>
+        <view class="room-right">
+          <view class="room-status">
+            <text class="status-text {{item.status}}">{{item.statusText}}</text>
+            <button class="status-btn {{item.status === 'playing' ? '' : 'active'}}">
+              {{item.status === 'playing' ? '观战' : (item.needPassword ? '输入密码' : '加入')}}
+            </button>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view class="empty-state" wx:else>
+      <text class="tip-text">暂无房间，快去创建一个吧！</text>
+    </view>
+  </view>
+
+  <view class="footer">
+    <text class="tip-text">支持 <text class="tip-link">微信分享卡片</text> 邀请好友，点击即可直接进入对应房间。</text>
+  </view>
+</view>

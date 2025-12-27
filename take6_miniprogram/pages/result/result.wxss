@@ -1,0 +1,436 @@
+/* 结算页面样式 */
+.container {
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #0f172a 0%, #1e293b 100%);
+  position: relative;
+}
+
+/* 顶部标题 */
+.header {
+  padding: 40rpx 32rpx 24rpx;
+  position: relative;
+  z-index: 10;
+}
+
+.round-tag {
+  font-size: 24rpx;
+  color: #10b981;
+  font-weight: 600;
+  display: block;
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8rpx;
+}
+
+.page-title {
+  font-size: 36rpx;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.remaining-rounds {
+  font-size: 22rpx;
+  color: #94a3b8;
+}
+
+.highlight {
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+/* 背景图 */
+.bg-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 448rpx;
+  overflow: hidden;
+}
+
+.bg-img {
+  width: 100%;
+  height: 100%;
+  opacity: 0.6;
+}
+
+.bg-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, rgba(30, 41, 59, 0.9) 50%, #1e293b 100%);
+}
+
+/* 主体内容 */
+.content {
+  position: relative;
+  z-index: 10;
+  padding: 320rpx 32rpx 120rpx;
+}
+
+/* 排行榜卡片 */
+.ranking-card {
+  background: rgba(30, 41, 59, 0.9);
+  border: 1rpx solid rgba(16, 185, 129, 0.6);
+  border-radius: 48rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 8rpx 32rpx rgba(16, 185, 129, 0.3);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.trophy-icon {
+  font-size: 32rpx;
+}
+
+.card-title {
+  font-size: 28rpx;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.card-hint {
+  font-size: 22rpx;
+  color: #94a3b8;
+}
+
+/* 领奖台 */
+.podium {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+  align-items: flex-end;
+}
+
+.podium-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.podium-item.first {
+  order: 2;
+}
+
+.podium-item.second {
+  order: 1;
+}
+
+.podium-item.third {
+  order: 3;
+}
+
+.podium-avatar {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  border: 2rpx solid #475569;
+  margin-bottom: 8rpx;
+}
+
+.podium-avatar.champion {
+  width: 112rpx;
+  height: 112rpx;
+  border-color: #fbbf24;
+  box-shadow: 0 8rpx 16rpx rgba(251, 191, 36, 0.4);
+}
+
+.crown-wrapper {
+  position: relative;
+}
+
+.crown-icon {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  font-size: 32rpx;
+}
+
+.podium-name {
+  font-size: 22rpx;
+  color: #e2e8f0;
+  margin-top: 4rpx;
+}
+
+.podium-score {
+  font-size: 22rpx;
+  color: #94a3b8;
+  margin-top: 4rpx;
+}
+
+.podium-score.champion-score {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.podium-rank {
+  font-size: 20rpx;
+  color: #64748b;
+  margin-top: 4rpx;
+}
+
+.podium-rank.mvp {
+  color: #10b981;
+}
+
+/* 本局明细 */
+.details-card {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1rpx solid #334155;
+  border-radius: 32rpx;
+  padding: 16rpx;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12rpx 0;
+}
+
+.detail-name {
+  font-size: 22rpx;
+  color: #e2e8f0;
+}
+
+.detail-score {
+  font-size: 22rpx;
+  color: #fbbf24;
+}
+
+.detail-score.my-score {
+  color: #10b981;
+}
+
+/* 累计积分区 */
+.total-score-card {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1rpx solid #334155;
+  border-radius: 32rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+}
+
+.target-hint {
+  font-size: 22rpx;
+  color: #94a3b8;
+}
+
+.total-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  margin-top: 16rpx;
+}
+
+.total-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.total-left {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.fire-icon {
+  font-size: 20rpx;
+}
+
+.total-name {
+  font-size: 22rpx;
+  color: #e2e8f0;
+}
+
+.total-value {
+  font-size: 22rpx;
+  color: #cbd5e1;
+}
+
+.total-value.my-total {
+  color: #10b981;
+  font-weight: 600;
+}
+
+/* 操作按钮 */
+.actions {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.action-btn {
+  flex: 1;
+  height: 88rpx;
+  border-radius: 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  border: none;
+}
+
+.action-btn.review {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.action-btn.again {
+  background: #10b981;
+  color: #0f172a;
+}
+
+.action-icon {
+  font-size: 32rpx;
+}
+
+.share-btn {
+  width: 100%;
+  height: 80rpx;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1rpx solid #334155;
+  border-radius: 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  color: #e2e8f0;
+  font-size: 28rpx;
+  border: none;
+}
+
+.share-icon {
+  font-size: 32rpx;
+}
+
+/* 海报弹窗 */
+.poster-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.poster-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.poster-content {
+  position: relative;
+  width: 90%;
+  max-width: 500rpx;
+  background: #1e293b;
+  border-radius: 32rpx;
+  padding: 32rpx;
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.5);
+  animation: posterSlideIn 0.3s ease-out;
+}
+
+@keyframes posterSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(50rpx);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.poster-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.poster-title {
+  font-size: 28rpx;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.poster-close {
+  font-size: 36rpx;
+  color: #94a3b8;
+  cursor: pointer;
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.poster-image {
+  width: 100%;
+  border-radius: 16rpx;
+  margin-bottom: 24rpx;
+  background: #0f172a;
+}
+
+.poster-actions {
+  display: flex;
+  gap: 16rpx;
+}
+
+.poster-btn {
+  flex: 1;
+  height: 72rpx;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  border: none;
+}
+
+.poster-btn.save {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.poster-btn.share {
+  background: #10b981;
+  color: #0f172a;
+}
+
+.poster-btn-icon {
+  font-size: 28rpx;
+}
+

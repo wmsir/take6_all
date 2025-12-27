@@ -1,0 +1,59 @@
+<view class="container">
+  <view class="header">
+    <text class="page-title">创建房间</text>
+  </view>
+
+  <view class="form-card">
+    <!-- 房间名称 -->
+    <view class="form-item">
+      <text class="label">房间名称</text>
+      <input class="input" placeholder="请输入房间名称" value="{{roomName}}" bindinput="onInput" data-field="roomName"/>
+    </view>
+
+    <!-- 游戏人数 -->
+    <view class="form-item">
+      <text class="label">游戏人数</text>
+      <picker bindchange="onMaxPlayersChange" value="{{maxPlayersIndex}}" range="{{maxPlayersRange}}">
+        <view class="picker">
+          {{maxPlayers}} 人 <text class="arrow">›</text>
+        </view>
+      </picker>
+    </view>
+
+    <!-- 结束规则 -->
+    <view class="form-item">
+      <text class="label">结束规则</text>
+      <picker bindchange="onEndTypeChange" value="{{endTypeIndex}}" range="{{endTypeRange}}" range-key="name">
+        <view class="picker">
+          {{endTypeRange[endTypeIndex].name}} <text class="arrow">›</text>
+        </view>
+      </picker>
+    </view>
+
+    <!-- 规则数值 -->
+    <view class="form-item" wx:if="{{endTypeIndex == 0}}">
+      <text class="label">目标分数</text>
+      <input class="input" type="number" placeholder="默认 66 分" value="{{targetScore}}" bindinput="onInput" data-field="targetScore"/>
+    </view>
+    <view class="form-item" wx:else>
+      <text class="label">最大局数</text>
+      <input class="input" type="number" placeholder="默认 10 局" value="{{maxRounds}}" bindinput="onInput" data-field="maxRounds"/>
+    </view>
+
+    <!-- 私密房间 -->
+    <view class="form-item">
+      <text class="label">私密房间</text>
+      <switch color="#10b981" checked="{{isPrivate}}" bindchange="onPrivateChange"/>
+    </view>
+
+    <!-- 房间密码 -->
+    <view class="form-item" wx:if="{{isPrivate}}">
+      <text class="label">房间密码</text>
+      <input class="input" password type="number" placeholder="设置 4 位数字密码" maxlength="4" value="{{password}}" bindinput="onInput" data-field="password"/>
+    </view>
+  </view>
+
+  <button class="create-btn" bindtap="handleCreate" disabled="{{loading}}">
+    {{loading ? '创建中...' : '立即创建'}}
+  </button>
+</view>

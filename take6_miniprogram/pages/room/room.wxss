@@ -1,0 +1,477 @@
+/* Global Styles */
+page {
+  background-color: #0b1124; /* Dark blue background */
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Segoe UI, Arial, Roboto, 'PingFang SC', 'miui', 'Hiragino Sans GB', 'Microsoft Yahei', sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom Header */
+.custom-header {
+  background-color: #0b1124;
+  padding-bottom: 20rpx;
+  position: relative;
+  z-index: 100;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 30rpx;
+  height: 88rpx; /* Standard header height */
+}
+
+.room-tag {
+  color: #00e676; /* Bright Green */
+  font-size: 24rpx;
+  font-weight: bold;
+}
+
+.header-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.exit-btn {
+  font-size: 24rpx;
+  color: #8fa0c1;
+  display: flex;
+  align-items: center;
+}
+
+.arrow-left {
+  margin-right: 6rpx;
+  font-size: 32rpx;
+}
+
+/* Main Content Scroll View */
+.main-content {
+  flex: 1;
+  padding: 20rpx 30rpx;
+  box-sizing: border-box;
+}
+
+/* Cards */
+.card {
+  background-color: #151d30; /* Slightly lighter dark blue */
+  border-radius: 24rpx;
+  padding: 30rpx;
+  margin-bottom: 30rpx;
+  border: 1rpx solid #232d45;
+}
+
+/* Rules Card */
+.rules-card .card-content {
+  display: flex;
+  justify-content: space-between;
+}
+
+.rules-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.rules-text {
+  font-size: 28rpx;
+  color: #ffffff;
+  margin-bottom: 8rpx;
+  font-weight: bold;
+}
+
+.rules-detail {
+  font-size: 24rpx;
+  color: #8fa0c1;
+  margin-bottom: 8rpx;
+}
+
+.current-round {
+  font-size: 24rpx;
+  color: #8fa0c1;
+}
+
+.host-info {
+  text-align: right;
+}
+
+.host-label {
+  font-size: 22rpx;
+  color: #8fa0c1;
+  margin-bottom: 4rpx;
+}
+
+.host-name {
+  font-size: 28rpx;
+  color: #ffffff;
+  font-weight: bold;
+}
+
+/* Players Card */
+.players-card {
+  padding: 0; /* Padding handled inside header and grid */
+}
+
+.card-header {
+  padding: 20rpx 30rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-title {
+  font-size: 28rpx;
+  color: #ffffff;
+  font-weight: bold;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.add-bot-btn {
+  background-color: #1e2840;
+  padding: 8rpx 16rpx;
+  border-radius: 12rpx;
+  font-size: 22rpx;
+  color: #00e676;
+  border: 1rpx solid rgba(0, 230, 118, 0.3);
+}
+
+.sync-status {
+  display: flex;
+  align-items: center;
+  font-size: 22rpx;
+  color: #00e676;
+}
+
+.status-dot {
+  width: 12rpx;
+  height: 12rpx;
+  background-color: #00e676;
+  border-radius: 50%;
+  margin-right: 8rpx;
+}
+
+.players-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* 4 per row for compactness */
+  gap: 16rpx;
+  padding: 0 30rpx 30rpx;
+}
+
+/* Compact Player Slot */
+.player-slot.compact {
+  background-color: #1e2840;
+  border-radius: 16rpx;
+  padding: 16rpx 10rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 140rpx; /* Reduced height */
+  position: relative;
+  box-sizing: border-box;
+}
+
+.avatar-container.small {
+  position: relative;
+  width: 70rpx;
+  height: 70rpx;
+  margin-bottom: 12rpx;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2rpx solid #333f5a;
+}
+
+.role-badge {
+  position: absolute;
+  top: -6rpx;
+  right: -10rpx;
+  left: auto;
+  transform: none;
+  background-color: #00e676;
+  color: #0b1124;
+  font-size: 16rpx;
+  padding: 2rpx 6rpx;
+  border-radius: 8rpx;
+  font-weight: bold;
+}
+
+.ready-badge {
+  position: absolute;
+  bottom: -4rpx;
+  right: -4rpx;
+  background-color: #00e676;
+  color: #0b1124;
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: 50%;
+  font-size: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  border: 2rpx solid #1e2840;
+}
+
+.player-name.compact {
+  font-size: 22rpx;
+  color: #ffffff;
+  font-weight: normal;
+  text-align: center;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Empty State Compact */
+.player-slot.empty.compact {
+  border: 2rpx dashed #333f5a;
+  background-color: transparent;
+}
+
+.add-icon.small {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background-color: #2a3650;
+  color: #8fa0c1;
+  font-size: 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8rpx;
+}
+
+.empty-text.compact {
+  font-size: 20rpx;
+  color: #5c6b8a;
+  text-align: center;
+}
+
+/* Chat Card */
+.chat-card {
+  height: 400rpx;
+  display: flex;
+  flex-direction: column;
+  padding: 20rpx 30rpx;
+}
+
+.chat-list {
+  flex: 1;
+  height: 0;
+  margin-bottom: 20rpx;
+}
+
+.chat-placeholder {
+  display: flex;
+  justify-content: center;
+  margin-top: 100rpx;
+}
+
+.chat-placeholder text {
+  font-size: 24rpx;
+  color: #333f5a;
+}
+
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16rpx;
+}
+
+.chat-message.me {
+  align-items: flex-end;
+}
+
+.chat-message.other {
+  align-items: flex-start;
+}
+
+.sender-name {
+  font-size: 20rpx;
+  color: #5c6b8a;
+  margin-bottom: 4rpx;
+  margin-left: 12rpx;
+}
+
+.message-bubble {
+  background-color: #1e2840;
+  padding: 12rpx 20rpx;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  color: #ffffff;
+  max-width: 80%;
+  word-wrap: break-word;
+}
+
+.chat-message.me .message-bubble {
+  background-color: #005c2f; /* Darker green for me */
+  color: #00e676;
+}
+
+.chat-input-area {
+  display: flex;
+  align-items: center;
+  border-top: 1rpx solid #232d45;
+  padding-top: 20rpx;
+}
+
+.chat-input {
+  flex: 1;
+  height: 72rpx;
+  background-color: #1e2840;
+  border-radius: 36rpx;
+  padding: 0 30rpx;
+  font-size: 24rpx;
+  color: #ffffff;
+  margin-right: 20rpx;
+}
+
+.send-btn {
+  font-size: 24rpx;
+  color: #00e676;
+  padding: 10rpx 20rpx;
+  font-weight: bold;
+}
+
+/* Footer Actions (Row) */
+.room-footer-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-bottom: 30rpx;
+}
+
+.room-id-btn {
+  flex: 1;
+  height: 88rpx;
+  background-color: #151d30;
+  border: 1rpx solid #232d45;
+  border-radius: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  color: #ffffff;
+  font-weight: bold;
+}
+
+.id-text {
+  margin-right: 12rpx;
+}
+
+.copy-icon-sm {
+  width: 24rpx;
+}
+
+.share-btn.compact {
+  flex: 1;
+  height: 88rpx;
+  background-color: #1e2840; /* Matching darker blue */
+  border-radius: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  color: #ffffff;
+  margin: 0;
+  padding: 0;
+  width: auto;
+  font-weight: bold;
+}
+
+.wechat-icon {
+  margin-right: 12rpx;
+}
+
+/* Status Info */
+.room-status-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 30rpx;
+  margin-bottom: 20rpx;
+  background-color: #151d30;
+  border-radius: 16rpx;
+  border: 1rpx solid #232d45;
+}
+
+.hint-text {
+  font-size: 22rpx;
+  color: #5c6b8a;
+}
+
+.ready-count {
+  font-size: 24rpx;
+  color: #8fa0c1;
+  display: flex;
+  align-items: center;
+}
+
+.user-icon {
+  margin-right: 8rpx;
+  color: #00e676;
+}
+
+/* Action Buttons Section (Above Player List) */
+.action-buttons-section {
+  display: flex;
+  justify-content: space-between;
+  gap: 20rpx;
+  margin-bottom: 20rpx;
+  padding: 0;
+}
+
+.action-btn {
+  flex: 1;
+  height: 100rpx;
+  border-radius: 30rpx;
+  font-size: 32rpx;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+}
+
+.action-btn.secondary {
+  background-color: #1e2840;
+  color: #ffffff;
+}
+
+.action-btn.secondary.active {
+  background-color: #333f5a;
+  color: #8fa0c1;
+}
+
+.action-btn.primary {
+  background-color: #00e676;
+  color: #0b1124;
+}
+
+.action-btn.disabled {
+  opacity: 0.5;
+  background-color: #1e2840 !important;
+  color: #5c6b8a !important;
+}
+
+.action-btn::after {
+  border: none;
+}

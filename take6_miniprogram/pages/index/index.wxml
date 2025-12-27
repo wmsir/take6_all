@@ -1,0 +1,45 @@
+<view class="container">
+  <view class="header">
+    <view class="user-info">
+      <text class="welcome">欢迎, {{userInfo.nickname || userInfo.username}}</text>
+      <button class="logout-btn" bindtap="handleLogout">退出登录</button>
+    </view>
+  </view>
+
+  <view class="room-section">
+    <view class="create-room">
+      <input class="room-input" type="text" placeholder="输入房间名称" bindinput="onRoomNameInput" value="{{newRoomName}}" />
+      <button class="create-btn" bindtap="handleCreateRoom" loading="{{creating}}">创建房间</button>
+    </view>
+
+    <view class="room-list">
+      <view class="list-header">
+        <text class="title">房间列表</text>
+        <button class="refresh-btn" bindtap="fetchRooms" loading="{{loading}}">刷新</button>
+      </view>
+
+      <scroll-view scroll-y class="room-scroll" bindscrolltolower="onScrollToLower">
+        <block wx:if="{{rooms.length > 0}}">
+          <view class="room-item" wx:for="{{rooms}}" wx:key="roomId">
+            <view class="room-info">
+              <text class="room-name">{{item.roomName}}</text>
+              <text class="room-status">状态: {{item.gameState}}</text>
+              <text class="player-count">玩家: {{item.activePlayers}}/{{item.maxPlayers}}</text>
+            </view>
+            <button class="join-btn" bindtap="handleJoinRoom" data-room-id="{{item.roomId}}" 
+                    disabled="{{item.activePlayers >= item.maxPlayers || item.gameState === 'PLAYING'}}">
+              加入
+            </button>
+          </view>
+        </block>
+        <view wx:else class="empty-tip">
+          <text>暂无可用房间</text>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+
+  <view class="footer">
+    <text class="version">版本 1.0.0</text>
+  </view>
+</view> 

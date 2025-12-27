@@ -1,0 +1,125 @@
+<view class="container">
+  <!-- Custom Header -->
+  <view class="custom-header" style="padding-top: {{statusBarHeight}}px">
+    <view class="header-content">
+      <view class="room-tag" wx:if="{{roomId}}">房间 #{{roomId}}</view>
+      <view class="header-title">好友局 · 等待准备</view>
+      <view class="exit-btn" bindtap="handleLeaveRoom" wx:if="{{roomId}}">
+        <text class="arrow-left">←</text> 退出房间
+      </view>
+    </view>
+  </view>
+
+  <!-- Empty State (No Room Joined) -->
+  <view class="empty-state" wx:if="{{!roomId}}" style="margin-top: 200rpx; display: flex; flex-direction: column; align-items: center;">
+     <text style="color: #8fa0c1; margin-bottom: 20rpx;">您尚未加入任何房间</text>
+     <navigator url="/pages/lobby/lobby" open-type="switchTab" style="background: #10b981; padding: 20rpx 40rpx; border-radius: 10rpx; color: white;">前往大厅</navigator>
+  </view>
+
+  <!-- Main Content -->
+  <scroll-view scroll-y class="main-content" wx:if="{{roomId}}">
+    <!-- Rules Card -->
+    <view class="card rules-card">
+      <view class="card-content">
+        <view class="rules-info">
+          <view class="rules-text">规则配置</view>
+          <view class="rules-detail">{{ruleText}}</view>
+          <view class="current-round">当前局：第 {{roomInfo.currentRound || 1}} 局</view>
+        </view>
+        <view class="host-info">
+          <view class="host-label">房主</view>
+          <view class="host-name">{{hostName}}</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- Action Buttons (Moved above player list) -->
+    <view class="action-buttons-section">
+      <button class="action-btn secondary {{isMeReady ? 'active' : ''}}" bindtap="handleReady">
+        {{isMeReady ? '取消准备' : '我已准备'}}
+      </button>
+
+      <button class="action-btn primary {{canStartGame && isHost ? '' : 'disabled'}}" bindtap="handleStartGame" disabled="{{!canStartGame || !isHost}}">
+        房主开始游戏
+      </button>
+    </view>
+
+    <!-- Player List Card -->
+    <view class="card players-card">
+      <view class="card-header">
+        <text class="card-title">玩家 ({{activePlayers}} / {{maxPlayers}})</text>
+        <view class="header-actions" wx:if="{{isHost && activePlayers < maxPlayers}}">
+           <picker bindchange="onBotCountChange" range="{{botCountRange}}">
+             <view class="add-bot-btn">
+               <text>+ 添加电脑</text>
+             </view>
+           </picker>
+        </view>
+      </view>
+
+      <view class="players-grid compact">
+        <block wx:for="{{playerSlots}}" wx:key="index">
+          <!-- Occupied Slot -->
+          <view class="player-slot occupied compact" wx:if="{{item.player}}">
+            <view class="avatar-container small">
+              <image class="avatar" src="{{item.player.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+              <view class="role-badge" wx:if="{{item.isHost}}">房主</view>
+              <view class="role-badge" wx:if="{{item.player.isRobot}}" style="background-color: #3b82f6;">AI</view>
+              <view class="ready-badge" wx:if="{{item.player.isReady === true || (item.isHost && item.player.isReady !== false)}}">✓</view>
+            </view>
+            <view class="player-name compact">
+              {{item.isMe ? '我' : item.player.nickname}}
+            </view>
+          </view>
+
+          <!-- Empty Slot -->
+          <view class="player-slot empty compact" wx:else>
+            <view class="add-icon small">+</view>
+            <view class="empty-text compact">等待加入</view>
+          </view>
+        </block>
+      </view>
+    </view>
+
+    <!-- Status Info (Moved between player list and action buttons) -->
+    <view class="room-status-info">
+       <text class="hint-text">所有玩家点击"准备"后，房主可开始游戏。</text>
+       <view class="ready-count">
+         <text class="user-icon">👤</text> {{readyCount}}/{{maxPlayers}} 已准备
+       </view>
+    </view>
+
+    <!-- Chat Window Card -->
+    <view class="card chat-card">
+      <scroll-view scroll-y class="chat-list" scroll-into-view="msg-{{chatMessages.length-1}}">
+        <block wx:for="{{chatMessages}}" wx:key="index">
+          <view id="msg-{{index}}" class="chat-message {{item.isMe ? 'me' : 'other'}}">
+             <view class="sender-name" wx:if="{{!item.isMe}}">{{item.sender}}</view>
+             <view class="message-bubble">{{item.content}}</view>
+          </view>
+        </block>
+        <view class="chat-placeholder" wx:if="{{chatMessages.length === 0}}">
+          <text>房间内的聊天记录</text>
+        </view>
+      </scroll-view>
+
+      <view class="chat-input-area">
+        <input class="chat-input" placeholder="发送消息..." value="{{inputValue}}" bindinput="onInput" confirm-type="send" bindconfirm="handleSendChat" />
+        <view class="send-btn" bindtap="handleSendChat">发送</view>
+      </view>
+    </view>
+
+    <!-- Footer Actions (Room ID & Share) -->
+    <view class="room-footer-actions">
+       <view class="room-id-btn" bindtap="handleCopyRoomId">
+         <text class="id-text">房间号: {{roomId}}</text>
+         <image class="copy-icon-sm" src="/images/copy.png" mode="widthFix"></image>
+       </view>
+
+       <button class="share-btn compact" bindtap="handleShareRoom" open-type="share">
+        <text class="wechat-icon">💬</text> 微信邀请
+       </button>
+    </view>
+  </scroll-view>
+
+</view>
