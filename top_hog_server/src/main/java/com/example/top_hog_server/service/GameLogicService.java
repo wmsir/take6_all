@@ -663,6 +663,8 @@ public class GameLogicService {
 
                 room.addPlayer(bot);
             }
+            // Broadcast the update so the frontend sees the new bot immediately
+            broadcastGameState(roomId, "Added " + botCount + " bots to the room.", room);
         } finally {
             roomLock.unlock();
         }
