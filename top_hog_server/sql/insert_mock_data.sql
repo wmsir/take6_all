@@ -3,7 +3,7 @@ DELETE FROM game_history WHERE user_id = (SELECT id FROM Users WHERE wechat_open
 DELETE FROM Users WHERE wechat_openid = 'oTKf94hxsbzghhsbn12SJMvA3EcQ';
 
 -- Insert Main User
-INSERT INTO Users (wechat_openid, nickname, created_at, updated_at, vip_status) VALUES ('oTKf94hxsbzghhsbn12SJMvA3EcQ', '我 • Take6 玩家', '2025-12-04 12:11:49', '2025-12-16 12:11:49', 1);
+INSERT INTO Users (wechat_openid, nickname, created_at, updated_at, vip_status) VALUES ('oTKf94hxsbzghhsbn12SJMvA3EcQ', '我 • 谁是猪头王 玩家', '2025-12-04 12:11:49', '2025-12-16 12:11:49', 1);
 SET @main_user_id = (SELECT id FROM Users WHERE wechat_openid = 'oTKf94hxsbzghhsbn12SJMvA3EcQ');
 
 -- Insert Opponents if not exist

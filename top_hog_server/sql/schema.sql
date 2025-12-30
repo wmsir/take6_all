@@ -1,7 +1,7 @@
 -- 创建数据库
-CREATE DATABASE IF NOT EXISTS `take6_db` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS `top_hog_db` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-USE `take6_db`;
+USE `top_hog_db`;
 
 -- 用户表
 -- 存储用户的基本信息、账户凭证和微信/QQ绑定信息
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS `game_history` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '记录ID，主键',
   `user_id` bigint(20) DEFAULT NULL COMMENT '用户ID (关联 Users.id)',
   `room_id` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '房间ID',
-  `score` int(11) NOT NULL COMMENT '本局得分 (牛头数)',
+  `score` int(11) NOT NULL COMMENT '本局得分 (猪头数)',
   `rank` int(11) NOT NULL COMMENT '本局排名',
   `room_avg_score` double DEFAULT NULL COMMENT '本局房间平均得分',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '记录创建时间',

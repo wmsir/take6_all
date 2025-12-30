@@ -222,7 +222,7 @@ Page({
     ctx.fillStyle = '#10b981';
     ctx.font = 'bold 16px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Take6 游戏战绩', canvasWidth / 2, 40);
+    ctx.fillText('谁是猪头王 游戏战绩', canvasWidth / 2, 40);
 
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 24px sans-serif';
@@ -285,7 +285,7 @@ Page({
     ctx.fillStyle = '#64748b';
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('扫码加入 Take6 游戏', canvasWidth / 2, canvasHeight - 30);
+    ctx.fillText('扫码加入 谁是猪头王 游戏', canvasWidth / 2, canvasHeight - 30);
 
     // 7. 生成图片
     wx.canvasToTempFilePath({
@@ -345,7 +345,7 @@ Page({
   onShareAppMessage() {
     const myRanking = this.data.rankings.findIndex(r => r.isMe) + 1;
     return {
-      title: `我在 Take6 第${this.data.currentRound}局获得第${myRanking}名！`,
+      title: `我在 谁是猪头王 第${this.data.currentRound}局获得第${myRanking}名！`,
       path: `/pages/lobby/lobby`,
       imageUrl: this.data.posterPath || '/images/share-result.jpg'
     };

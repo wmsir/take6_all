@@ -9,10 +9,10 @@ import org.springframework.context.annotation.Configuration;
 public class SwaggerConfig {
 
     @Bean
-    public OpenAPI take6OpenAPI() {
+    public OpenAPI topHogOpenAPI() {
         return new OpenAPI()
-                .info(new Info().title("Take6 服务器 API")
-                        .description("Take6 服务器应用程序的 API 文档")
+                .info(new Info().title("谁是猪头王 服务器 API")
+                        .description("谁是猪头王 服务器应用程序的 API 文档")
                         .version("v1.0"));
     }
 }

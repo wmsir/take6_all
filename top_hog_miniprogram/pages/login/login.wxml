@@ -25,7 +25,7 @@
             <text class="welcome-desc">您已登录成功，准备开始游戏吧！</text>
           </block>
           <block wx:else>
-            <text class="welcome-title">欢迎来到 Take6 线上牌桌</text>
+            <text class="welcome-title">欢迎来到 谁是猪头王 线上牌桌</text>
             <text class="welcome-desc">使用微信授权，一键同步头像昵称与历史战绩。</text>
           </block>
         </view>

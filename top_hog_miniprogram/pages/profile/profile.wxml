@@ -108,7 +108,7 @@
       <view class="setting-item">
         <view class="setting-left">
           <text class="setting-icon">ℹ️</text>
-          <text>关于 Take6</text>
+          <text>关于 谁是猪头王</text>
         </view>
         <text class="setting-version">v0.1 原型</text>
       </view>
