@@ -43,11 +43,15 @@
             <div v-if="joiningFeedback" class="joining-feedback">{{ joiningFeedback }}</div>
 
              <!-- Choice Area -->
-            <div v-if="showChoiceArea" class="player-choice-area section">
-                <h3>请选择您要收取的牌列</h3>
-                <p>您打出的牌: <strong>{{ cardLeadingToChoice ? `${cardLeadingToChoice.number} (🐂${cardLeadingToChoice.bullheads})` : '' }}</strong></p>
-                <p>请在 <strong style="color: red;">{{ choiceTimer }}</strong> 秒内点击对应牌列前的“选择此行”按钮：</p>
-            </div>
+            <Transition name="popup">
+                <div v-if="showChoiceArea" class="choice-overlay-modal">
+                     <div class="player-choice-area section">
+                        <h3>请选择您要收取的牌列</h3>
+                        <p>您打出的牌: <strong>{{ cardLeadingToChoice ? `${cardLeadingToChoice.number} (🐂${cardLeadingToChoice.bullheads})` : '' }}</strong></p>
+                        <p>请在 <strong style="color: red;">{{ choiceTimer }}</strong> 秒内点击对应牌列前的“选择此行”按钮：</p>
+                    </div>
+                </div>
+            </Transition>
 
             <!-- Game Rows -->
             <h3>桌面牌列:</h3>
@@ -61,10 +65,12 @@
 
                     <div class="game-row-content">
                         <strong>行 {{ index + 1 }}: </strong>
-                        <div v-for="card in row.cards" :key="card.number" class="card">
-                            <span class="number">{{ card.number }}</span>
-                            <span class="bullheads">🐂 {{ card.bullheads }}</span>
-                        </div>
+                        <TransitionGroup name="card-anim" tag="div" class="cards-container">
+                            <div v-for="card in row.cards" :key="card.number" class="card">
+                                <span class="number">{{ card.number }}</span>
+                                <span class="bullheads">🐂 {{ card.bullheads }}</span>
+                            </div>
+                        </TransitionGroup>
                         <span v-if="!row.cards || row.cards.length === 0">(空)</span>
                     </div>
                 </div>
@@ -625,9 +631,48 @@ onUnmounted(() => {
 .game-row-content {
     display: flex;
     flex-wrap: nowrap;
+    align-items: center;
+    flex-grow: 1;
+    overflow: visible; /* Allow animations to fly in from outside if needed */
+}
+.cards-container {
+    display: flex;
+    flex-wrap: nowrap;
     overflow-x: auto;
     align-items: center;
     flex-grow: 1;
+    min-height: 85px; /* Ensure height for animation */
+}
+
+/* Animations */
+.card-anim-enter-active {
+  transition: all 1.5s ease-out;
+}
+.card-anim-leave-active {
+  transition: all 0.5s cubic-bezier(1, 0.5, 0.8, 1);
+  position: absolute;
+}
+
+.card-anim-enter-from {
+  opacity: 0;
+  transform: translateY(150px) scale(1.5); /* Fly in from bottom */
+}
+.card-anim-leave-to {
+  opacity: 0;
+  transform: scale(0.1);
+}
+.card-anim-move {
+  transition: transform 1s ease;
+}
+
+.popup-enter-active,
+.popup-leave-active {
+  transition: all 0.5s ease;
+}
+.popup-enter-from,
+.popup-leave-to {
+  opacity: 0;
+  transform: scale(0.5) translateY(-50px);
 }
 
 /* Card */
@@ -725,9 +770,20 @@ onUnmounted(() => {
 }
 
 /* Choice */
+.choice-overlay-modal {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 900;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 .player-choice-area {
     border: 2px solid #f57c00;
     background-color: #fffde7;
+    padding: 30px;
+    max-width: 500px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 .row-choice-control {
     margin-right: 10px;
