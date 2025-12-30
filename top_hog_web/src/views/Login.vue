@@ -71,9 +71,9 @@ const signin = async () => {
   loading.value = true;
   try {
     const response = await api.post('/auth/signin', signinForm);
-    if (response.data.code === 1000) {
+    if (response.data.code === 200) {
       const data = response.data.data;
-      localStorage.setItem('jwt_token', data.token);
+      localStorage.setItem('jwt_token', data.accessToken);
       localStorage.setItem('user_info', JSON.stringify({
         id: data.id,
         username: data.username,
@@ -100,7 +100,7 @@ const getVerificationCode = async () => {
     codeLoading.value = true;
     try {
         const response = await api.post('/auth/request-verification-code', { email: signupForm.email });
-        if (response.data.code === 1000) {
+        if (response.data.code === 200) {
             showMessage('验证码已发送', 'success');
             codeTimer.value = 60;
             const interval = setInterval(() => {
@@ -125,7 +125,7 @@ const signup = async () => {
     loading.value = true;
     try {
         const response = await api.post('/auth/signup', signupForm);
-        if (response.data.code === 1000 || response.status === 201) {
+        if (response.data.code === 200 || response.status === 201) {
             showMessage('注册成功，请登录', 'success');
             activeTab.value = 'signin';
             signinForm.username = signupForm.username;
