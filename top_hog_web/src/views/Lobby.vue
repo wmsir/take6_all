@@ -83,7 +83,7 @@ const fetchRooms = async () => {
     loadingRooms.value = true;
     try {
         const response = await api.post('/room/list', { page: 1, pageSize: 50 });
-        if (response.data.code === 1000) {
+        if (response.data.code === 200) {
             rooms.value = response.data.data.list;
         }
     } catch (error) {
@@ -98,7 +98,7 @@ const createRoom = async () => {
     loading.value = true;
     try {
         const response = await api.post('/room/create', { roomName: newRoomName.value });
-        if (response.data.code === 1000) {
+        if (response.data.code === 200) {
             const room = response.data.data;
             joinRoom(room.roomId);
         } else {
@@ -115,7 +115,7 @@ const createPveRoom = async () => {
     loading.value = true;
     try {
         const response = await api.post('/room/create-pve', { botCount: 5 });
-        if (response.data.code === 1000) {
+        if (response.data.code === 200) {
              const room = response.data.data;
              joinRoom(room.roomId);
         } else {
@@ -131,7 +131,7 @@ const createPveRoom = async () => {
 const joinRoom = async (roomId) => {
     try {
         const response = await api.post('/room/join', { roomId });
-        if (response.data.code === 1000) {
+        if (response.data.code === 200) {
             router.push(`/game/${roomId}`);
         } else {
             alert(response.data.message);

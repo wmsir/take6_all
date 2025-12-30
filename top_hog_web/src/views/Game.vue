@@ -29,6 +29,7 @@
                         :disabled="isMyPlayerBot">
                     {{ isMyPlayerReady ? '取消准备' : '准备' }}
                 </button>
+                <button v-if="isMyPlayerHost && gameState === 'WAITING'" @click="addBot">添加机器人</button>
                 <button v-if="canStartGame" @click="startGame">开始游戏</button>
                 <button @click="leaveRoom">离开房间</button>
                 <button v-if="gameState === 'GAME_OVER'"
@@ -98,7 +99,9 @@
                 <ul class="player-list">
                     <li v-for="player in playerList" :key="player.sessionId" :style="{ fontWeight: isMe(player) ? 'bold' : 'normal' }">
                         <span class="player-details">
+                            <span v-if="player.isHost" title="房主">🏠</span>
                             <strong>{{ player.displayName }}</strong>
+                            <span v-if="player.isHost" style="color: #f39c12; font-size: 0.8em; margin-left: 5px;">(房主)</span>
                             - 牛头: {{ player.score || 0 }}, 手牌: {{ player.hand ? player.hand.length : '?' }}
                         </span>
                         <span class="player-status" :style="{ color: getStatusColor(player) }">
@@ -232,6 +235,7 @@ const isMe = (player) => {
     return myPlayer.value && (player.sessionId === myPlayer.value.sessionId);
 };
 
+const isMyPlayerHost = computed(() => myPlayer.value?.isHost);
 const isMyPlayerReady = computed(() => myPlayer.value?.isReady);
 const isMyPlayerBot = computed(() => myPlayer.value?.is托管);
 const hasRequestedNewGame = computed(() => myPlayer.value?.requestedNewGame);
@@ -456,6 +460,17 @@ const toggleReady = () => {
 
 const startGame = () => {
     send({ type: 'startGame', roomId });
+};
+
+const addBot = async () => {
+    try {
+        const response = await api.post('/room/add-bots', { roomId, botCount: 1 });
+        if (response.data.code !== 200) {
+            alert(response.data.message);
+        }
+    } catch (e) {
+        alert(e.response?.data?.message || '添加机器人失败');
+    }
 };
 
 const selectCard = (card) => {
