@@ -262,6 +262,13 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                         sendErrorMessage(session, null, "“再来一局”请求缺少 roomId。");
                     }
                     break;
+                case "toggleAutoPlay":
+                    if (roomId != null) {
+                        gameLogicService.togglePlayerAutoPlay(roomId, session.getId());
+                    } else {
+                        sendErrorMessage(session, null, "toggleAutoPlay 请求缺少 roomId。");
+                    }
+                    break;
                 case "leaveRoom":
                     if (roomId != null) {
                         logger.info("用户 {} (会话 {}) 主动离开房间 {}", userId, session.getId(), roomId);

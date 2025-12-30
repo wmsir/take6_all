@@ -31,6 +31,11 @@
                 </button>
                 <button v-if="isMyPlayerHost && gameState === 'WAITING'" @click="addBot">添加机器人</button>
                 <button v-if="canStartGame" @click="startGame">开始游戏</button>
+                <button @click="toggleAutoPlay"
+                        :class="['ready-button', { 'is-ready': isMyPlayerBot }]"
+                        v-if="myPlayer">
+                    {{ isMyPlayerBot ? '取消托管' : '开启托管' }}
+                </button>
                 <button @click="leaveRoom">离开房间</button>
                 <button v-if="gameState === 'GAME_OVER'"
                         @click="playAgain"
@@ -92,7 +97,7 @@
 
             <div class="play-card-action">
                 <button @click="playCard" :disabled="!canPlayCard">出牌</button>
-                <button v-if="userInfo.vipStatus > 0" @click="getTip" :disabled="!canGetTip" class="tip-btn">💡 获取提示</button>
+                <button @click="getTip" :disabled="!canGetTip" class="tip-btn">💡 获取提示</button>
             </div>
             <div v-if="tipMessage" class="tip-message-area">{{ tipMessage }}</div>
 
@@ -267,8 +272,7 @@ const canGetTip = computed(() => {
     return gameState.value === 'PLAYING' &&
            !isWaitingForTurnProcessing.value &&
            myPlayer.value &&
-           !myPlayer.value.is托管 &&
-           userInfo.vipStatus > 0;
+           !myPlayer.value.is托管;
 });
 
 const showChoiceButtons = computed(() => {
@@ -466,6 +470,10 @@ const toggleReady = () => {
 
 const startGame = () => {
     send({ type: 'startGame', roomId });
+};
+
+const toggleAutoPlay = () => {
+    send({ type: 'toggleAutoPlay', roomId });
 };
 
 const addBot = async () => {
