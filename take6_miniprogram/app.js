@@ -2,8 +2,8 @@ App({
   globalData: {
     userInfo: null,
     token: null,
-    baseUrl: 'http://localhost:8080', // 后端服务器地址
-    wsUrl: 'ws://localhost:8080/ws-game', // WebSocket地址
+    baseUrl: 'http://localhost:8088', // 后端服务器地址
+    wsUrl: 'ws://localhost:8088/ws-game', // WebSocket地址
     currentRoom: null,
     isConnected: false
   },
