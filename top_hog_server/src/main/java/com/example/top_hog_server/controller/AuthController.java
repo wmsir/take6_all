@@ -192,11 +192,8 @@ public class AuthController {
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED) // 成功创建用户时返回201状态码
     public ApiResponse<String> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
-        // 1. 校验邮箱验证码
-        if (!verificationCodeService.verifyCode(signUpRequest.getEmail(), signUpRequest.getEmailVerificationCode())) {
-            logger.warn("用户注册失败 (邮箱: {}): 无效或已过期的验证码", signUpRequest.getEmail());
-            throw new BusinessException(ErrorCode.INVALID_VERIFICATION_CODE,"无效或已过期的验证码，如果需要请重新获取。");
-        }
+        // 1. (已移除) 校验邮箱验证码 - 直接注册不需要验证码
+        // if (!verificationCodeService.verifyCode(signUpRequest.getEmail(), signUpRequest.getEmailVerificationCode())) { ... }
 
         // 2. 检查用户名是否已存在
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
@@ -213,7 +210,7 @@ public class AuthController {
         // 4. 创建新用户账号
         User user = new User(signUpRequest.getUsername(),
                 signUpRequest.getEmail(),
-                encoder.encode(signUpRequest.getPassword()));
+                signUpRequest.getPassword()); // 密码先保存明文
         user.setNickname(signUpRequest.getUsername()); // 默认昵称为用户名
         user.setInviteCode(generateInviteCode());      // 生成邀请码
         user.setVipStatus(0);                          // 设置默认VIP状态
