@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>TopHog 小程序 - Room</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+  />
+</head>
+<body class="bg-slate-900 flex items-center justify-center min-h-screen">
+  <div class="w-[393px] h-[852px] bg-slate-900 rounded-[45px] shadow-2xl overflow-hidden relative border border-slate-800">
+    <!-- 状态栏 -->
+    <div class="h-10 px-4 flex items-center justify-between text-[11px] text-white/80 bg-gradient-to-b from-black/60 to-transparent">
+      <span>9:41</span>
+      <div class="flex items-center space-x-1">
+        <i class="fa-solid fa-signal"></i>
+        <i class="fa-solid fa-wifi"></i>
+        <i class="fa-solid fa-battery-three-quarters"></i>
+      </div>
+    </div>
+
+    <!-- 顶部导航 -->
+    <div class="px-4 flex items-center justify-between">
+      <div>
+        <div class="text-xs text-emerald-400 font-semibold">房间 #B43F</div>
+        <div class="text-lg text-white font-semibold mt-1">好友局 · 等待准备</div>
+      </div>
+      <button class="text-[11px] text-slate-400 flex items-center space-x-1">
+        <i class="fa-solid fa-arrow-left"></i><span>退出房间</span>
+      </button>
+    </div>
+
+    <!-- 房间信息 -->
+    <div class="px-4 pt-2 pb-20 space-y-3">
+      <div class="bg-slate-900 border border-slate-700 rounded-2xl p-3 flex items-center justify-between">
+        <div>
+          <div class="text-xs text-slate-200 font-medium">规则配置</div>
+          <div class="text-[11px] text-slate-400 mt-1">
+            4 人 · 最多 3 局 · 超过 <span class="text-amber-400 font-semibold">66</span> 分游戏结束
+          </div>
+          <div class="text-[11px] text-slate-400 mt-1">
+            当前局：<span class="text-slate-200 font-semibold">第 1 局</span>
+          </div>
+        </div>
+        <div class="text-right text-[11px]">
+          <div class="text-slate-400">房主</div>
+          <div class="text-slate-200 font-semibold">小王</div>
+        </div>
+      </div>
+
+      <!-- 玩家列表 -->
+      <div class="bg-slate-900 border border-slate-700 rounded-2xl p-3">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-sm text-white font-medium">玩家 (2 / 4)</div>
+          <div class="text-[11px] text-slate-400 flex items-center space-x-1">
+            <i class="fa-solid fa-circle text-[6px] text-emerald-400"></i>
+            <span>实时同步中</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <!-- 玩家 1 房主 -->
+          <div class="flex items-center space-x-2 p-2 rounded-xl bg-slate-800/80">
+            <div class="relative">
+              <img
+                src="https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?auto=format&fit=crop&w=200&q=80"
+                class="w-9 h-9 rounded-full object-cover"
+                alt="host"
+              />
+              <span class="absolute -bottom-1 -right-1 bg-emerald-500 text-[9px] text-slate-900 rounded-full px-1.5 py-0.5">
+                房主
+              </span>
+            </div>
+            <div class="flex-1">
+              <div class="text-xs text-white font-medium flex items-center space-x-1">
+                <span>小王</span>
+                <i class="fa-solid fa-crown text-amber-400 text-[10px]"></i>
+              </div>
+              <div class="text-[11px] text-emerald-400 mt-0.5">已准备</div>
+            </div>
+          </div>
+
+          <!-- 玩家 2 自己 -->
+          <div class="flex items-center space-x-2 p-2 rounded-xl bg-slate-800/60">
+            <div class="relative">
+              <img
+                src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"
+                class="w-9 h-9 rounded-full object-cover"
+                alt="you"
+              />
+              <span class="absolute -bottom-1 -right-1 bg-slate-700 text-[9px] text-slate-100 rounded-full px-1.5 py-0.5">
+                我
+              </span>
+            </div>
+            <div class="flex-1">
+              <div class="text-xs text-white font-medium">我 · 准备中</div>
+              <div class="text-[11px] text-amber-300 mt-0.5 flex items-center space-x-1">
+                <i class="fa-solid fa-hourglass-half text-[10px]"></i>
+                <span>点击下方“准备”加入牌局</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 空位 3 -->
+          <div class="flex items-center space-x-2 p-2 rounded-xl bg-slate-800/30 border border-dashed border-slate-600">
+            <div class="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 text-xs">
+              +
+            </div>
+            <div class="flex-1">
+              <div class="text-xs text-slate-200">等待加入</div>
+              <div class="text-[11px] text-slate-500 mt-0.5">
+                可分享房间卡片邀请好友
+              </div>
+            </div>
+          </div>
+
+          <!-- 空位 4 -->
+          <div class="flex items-center space-x-2 p-2 rounded-xl bg-slate-800/30 border border-dashed border-slate-600">
+            <div class="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 text-xs">
+              +
+            </div>
+            <div class="flex-1">
+              <div class="text-xs text-slate-200">等待加入</div>
+              <div class="text-[11px] text-slate-500 mt-0.5">
+                支持最多 4 人同桌
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 房间操作 -->
+      <div class="bg-slate-900 border border-slate-700 rounded-2xl p-3 space-y-3">
+        <div class="flex items-center justify-between text-[11px] text-slate-400">
+          <div>房间号：<span class="text-slate-100 font-semibold">B43F</span></div>
+          <button class="flex items-center space-x-1 text-emerald-400">
+            <i class="fa-solid fa-copy text-[10px]"></i><span>复制房间号</span>
+          </button>
+        </div>
+        <button class="w-full h-9 rounded-xl bg-slate-800 text-[11px] text-slate-100 flex items-center justify-center space-x-2">
+          <i class="fa-brands fa-weixin"></i>
+          <span>微信分享房间邀请卡</span>
+        </button>
+        <div class="flex items-center justify-between text-[11px] text-slate-400">
+          <span>所有玩家点击“准备”后，房主可开始游戏。</span>
+          <span class="flex items-center space-x-1">
+            <i class="fa-solid fa-user-check text-emerald-400"></i>
+            <span>2/4 已准备</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- 底部房主/玩家按钮区 -->
+      <div class="mt-2 flex space-x-2">
+        <button class="flex-1 h-11 rounded-2xl bg-slate-800 text-sm text-slate-100 font-semibold">
+          我已准备
+        </button>
+        <button class="flex-1 h-11 rounded-2xl bg-emerald-500 text-sm text-slate-900 font-semibold">
+          房主开始游戏
+        </button>
+      </div>
+    </div>
+
+    <!-- 底部 Tab Bar -->
+    <div class="absolute bottom-0 inset-x-0 h-16 bg-slate-950/95 border-t border-slate-800 flex items-center justify-around text-[11px]">
+      <div class="flex flex-col items-center text-slate-500">
+        <i class="fa-solid fa-house text-base mb-0.5"></i>
+        <span>大厅</span>
+      </div>
+      <div class="flex flex-col items-center text-emerald-400">
+        <i class="fa-solid fa-users text-base mb-0.5"></i>
+        <span>房间</span>
+      </div>
+      <div class="flex flex-col items-center text-slate-500">
+        <i class="fa-solid fa-layer-group text-base mb-0.5"></i>
+        <span>对局</span>
+      </div>
+      <div class="flex flex-col items-center text-slate-500">
+        <i class="fa-solid fa-user text-base mb-0.5"></i>
+        <span>我</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+
+

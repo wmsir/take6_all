@@ -1,0 +1,129 @@
+<!-- 结算页面 -->
+<view class="container">
+  <!-- 顶部标题 -->
+  <view class="header">
+    <text class="round-tag">第 {{currentRound}} 局 · 牌局结束</text>
+    <view class="header-row">
+      <text class="page-title">本局结算</text>
+      <text class="remaining-rounds">距离终局还有 <text class="highlight">{{remainingRounds}}</text> 局</text>
+    </view>
+  </view>
+
+  <!-- 背景庆祝图 -->
+  <view class="bg-image">
+    <image class="bg-img" src="/images/celebration-bg.jpg" mode="aspectFill"></image>
+    <view class="bg-overlay"></view>
+  </view>
+
+  <scroll-view scroll-y class="content">
+    <!-- 排行榜卡片 -->
+    <view class="ranking-card">
+      <view class="card-header">
+        <view class="header-left">
+          <text class="trophy-icon">🏆</text>
+          <text class="card-title">本局排行榜</text>
+        </view>
+        <text class="card-hint">猪头越少排名越前</text>
+      </view>
+
+      <!-- 冠亚季军 -->
+      <view class="podium" wx:if="{{rankings.length >= 3}}">
+        <view class="podium-item second">
+          <image class="podium-avatar" src="{{rankings[1].avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+          <text class="podium-name">{{rankings[1].name}}</text>
+          <text class="podium-score">{{rankings[1].score}} 猪</text>
+          <text class="podium-rank">亚军</text>
+        </view>
+
+        <view class="podium-item first">
+          <view class="crown-wrapper">
+            <image class="podium-avatar champion" src="{{rankings[0].avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+            <text class="crown-icon">👑</text>
+          </view>
+          <text class="podium-name">{{rankings[0].name}}</text>
+          <text class="podium-score champion-score">{{rankings[0].score}} 猪</text>
+          <text class="podium-rank mvp">本局 MVP</text>
+        </view>
+
+        <view class="podium-item third">
+          <image class="podium-avatar" src="{{rankings[2].avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+          <text class="podium-name">{{rankings[2].name}}</text>
+          <text class="podium-score">{{rankings[2].score}} 猪</text>
+          <text class="podium-rank">季军</text>
+        </view>
+      </view>
+
+      <!-- 本局明细 -->
+      <view class="details-card">
+        <view class="detail-item" wx:for="{{rankings}}" wx:key="id">
+          <text class="detail-name">{{item.name}}</text>
+          <text class="detail-score {{item.isMe ? 'my-score' : ''}}">-{{item.score}} 猪</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 累计积分区 -->
+    <view class="total-score-card">
+      <view class="card-header">
+        <text>总积分（猪头累加）</text>
+        <text class="target-hint">目标：有人超过 <text class="highlight">{{targetScore}}</text> 分结束</text>
+      </view>
+      <view class="total-list">
+        <view class="total-item" wx:for="{{totalScores}}" wx:key="id">
+          <view class="total-left">
+            <text wx:if="{{item.isMe}}" class="fire-icon">🔥</text>
+            <text class="total-name">{{item.name}}</text>
+          </view>
+          <text class="total-value {{item.isMe ? 'my-total' : ''}}">{{item.total}} 猪</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="actions">
+      <button class="action-btn review" bindtap="handleReview">
+        <text class="action-icon">📊</text>
+        <text>查看本局复盘</text>
+      </button>
+      <button class="action-btn again" bindtap="handlePlayAgain">
+        <text class="action-icon">🔄</text>
+        <text>再来一局</text>
+      </button>
+    </view>
+
+    <button class="share-btn" bindtap="handleShare" open-type="share">
+      <text class="share-icon">📤</text>
+      <text>分享战绩海报</text>
+    </button>
+  </scroll-view>
+
+  <!-- 海报弹窗 -->
+  <view class="poster-modal" wx:if="{{showPoster}}">
+    <view class="poster-mask" catchtap="handleClosePoster"></view>
+    <view class="poster-content">
+      <view class="poster-header">
+        <text class="poster-title">战绩海报</text>
+        <text class="poster-close" catchtap="handleClosePoster">✕</text>
+      </view>
+      <image class="poster-image" src="{{posterPath}}" mode="widthFix"></image>
+      <view class="poster-actions">
+        <button class="poster-btn save" catchtap="handleSavePoster">
+          <text class="poster-btn-icon">💾</text>
+          <text>保存到相册</text>
+        </button>
+        <button class="poster-btn share" open-type="share">
+          <text class="poster-btn-icon">📤</text>
+          <text>分享给好友</text>
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 隐藏的 Canvas（用于生成海报） -->
+  <canvas 
+    id="posterCanvas" 
+    type="2d" 
+    style="position: fixed; top: -9999px; left: -9999px; width: {{canvasWidth}}px; height: {{canvasHeight}}px;">
+  </canvas>
+</view>
+
