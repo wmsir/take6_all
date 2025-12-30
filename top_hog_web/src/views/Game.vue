@@ -31,6 +31,11 @@
                 </button>
                 <button v-if="isMyPlayerHost && gameState === 'WAITING'" @click="addBot">添加机器人</button>
                 <button v-if="canStartGame" @click="startGame">开始游戏</button>
+                <button @click="toggleAutoPlay"
+                        :class="['ready-button', { 'is-ready': isMyPlayerBot }]"
+                        v-if="myPlayer">
+                    {{ isMyPlayerBot ? '取消托管' : '开启托管' }}
+                </button>
                 <button @click="leaveRoom">离开房间</button>
                 <button v-if="gameState === 'GAME_OVER'"
                         @click="playAgain"
@@ -65,12 +70,12 @@
 
                     <div class="game-row-content">
                         <strong>行 {{ index + 1 }}: </strong>
-                        <TransitionGroup name="card-anim" tag="div" class="cards-container">
+                        <div class="cards-container">
                             <div v-for="card in row.cards" :key="card.number" class="card">
                                 <span class="number">{{ card.number }}</span>
                                 <span class="bullheads">🐂 {{ card.bullheads }}</span>
                             </div>
-                        </TransitionGroup>
+                        </div>
                         <span v-if="!row.cards || row.cards.length === 0">(空)</span>
                     </div>
                 </div>
@@ -92,7 +97,7 @@
 
             <div class="play-card-action">
                 <button @click="playCard" :disabled="!canPlayCard">出牌</button>
-                <button v-if="userInfo.vipStatus > 0" @click="getTip" :disabled="!canGetTip" class="tip-btn">💡 获取提示</button>
+                <button @click="getTip" :disabled="!canGetTip" class="tip-btn">💡 获取提示</button>
             </div>
             <div v-if="tipMessage" class="tip-message-area">{{ tipMessage }}</div>
 
@@ -267,8 +272,7 @@ const canGetTip = computed(() => {
     return gameState.value === 'PLAYING' &&
            !isWaitingForTurnProcessing.value &&
            myPlayer.value &&
-           !myPlayer.value.is托管 &&
-           userInfo.vipStatus > 0;
+           !myPlayer.value.is托管;
 });
 
 const showChoiceButtons = computed(() => {
@@ -468,6 +472,10 @@ const startGame = () => {
     send({ type: 'startGame', roomId });
 };
 
+const toggleAutoPlay = () => {
+    send({ type: 'toggleAutoPlay', roomId });
+};
+
 const addBot = async () => {
     try {
         const response = await api.post('/room/add-bots', { roomId, botCount: 1 });
@@ -645,26 +653,6 @@ onUnmounted(() => {
 }
 
 /* Animations */
-.card-anim-enter-active {
-  transition: all 1.5s ease-out;
-}
-.card-anim-leave-active {
-  transition: all 0.5s cubic-bezier(1, 0.5, 0.8, 1);
-  position: absolute;
-}
-
-.card-anim-enter-from {
-  opacity: 0;
-  transform: translateY(150px) scale(1.5); /* Fly in from bottom */
-}
-.card-anim-leave-to {
-  opacity: 0;
-  transform: scale(0.1);
-}
-.card-anim-move {
-  transition: transform 1s ease;
-}
-
 .popup-enter-active,
 .popup-leave-active {
   transition: all 0.5s ease;

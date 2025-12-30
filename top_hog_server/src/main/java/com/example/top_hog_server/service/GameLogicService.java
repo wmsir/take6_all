@@ -1495,6 +1495,35 @@ public class GameLogicService {
         }
     }
 
+    // 切换玩家的托管（自动出牌）状态
+    public void togglePlayerAutoPlay(String roomId, String sessionId) {
+        GameRoom room = gameRoomService.getRoom(roomId);
+        if (room == null) {
+            return;
+        }
+        Lock roomLock = getRoomLock(roomId);
+        roomLock.lock();
+        try {
+            Player p = room.getPlayers().get(sessionId);
+            if (p == null) {
+                return;
+            }
+            // 切换状态
+            boolean newState = !p.isTrustee();
+            p.setTrustee(newState);
+
+            logger.info("玩家 {} 在房间 {} 切换托管状态为: {}", p.getDisplayName(), roomId, newState);
+            broadcastGameState(roomId, p.getDisplayName() + (newState ? " 开启了托管。" : " 取消了托管。"), room);
+
+            // 如果开启了托管，并且当前是可以出牌的状态，尝试立即执行自动出牌
+            if (newState && room.getGameState() == GameState.PLAYING) {
+                processBotTurnsAndCheckTurnCompletion(room);
+            }
+        } finally {
+            roomLock.unlock();
+        }
+    }
+
     // 决定赢家（规则：不论是否托管，分数最低者胜）
     private Player determineWinner(GameRoom room) {
         if (room.getPlayers().isEmpty()) {
@@ -1524,9 +1553,10 @@ public class GameLogicService {
             if (requestingPlayer == null) {
                 return Collections.singletonMap("error", "未找到玩家。");
             }
-            if (requestingPlayer.getVipStatus() == 0) {
-                return Collections.singletonMap("error", "非会员无法使用此功能。");
-            }
+            // 移除 VIP 检查，允许所有玩家使用提示功能
+            // if (requestingPlayer.getVipStatus() == 0) {
+            //     return Collections.singletonMap("error", "非会员无法使用此功能。");
+            // }
             if (room.getGameState() != GameState.PLAYING || requestingPlayer.isTrustee() || requestingPlayer.getHand().isEmpty()) {
                 return Collections.singletonMap("error", "当前状态无法获取提示。");
             }
