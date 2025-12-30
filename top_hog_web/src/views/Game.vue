@@ -65,12 +65,12 @@
 
                     <div class="game-row-content">
                         <strong>行 {{ index + 1 }}: </strong>
-                        <TransitionGroup name="card-anim" tag="div" class="cards-container">
+                        <div class="cards-container">
                             <div v-for="card in row.cards" :key="card.number" class="card">
                                 <span class="number">{{ card.number }}</span>
                                 <span class="bullheads">🐂 {{ card.bullheads }}</span>
                             </div>
-                        </TransitionGroup>
+                        </div>
                         <span v-if="!row.cards || row.cards.length === 0">(空)</span>
                     </div>
                 </div>
@@ -645,26 +645,6 @@ onUnmounted(() => {
 }
 
 /* Animations */
-.card-anim-enter-active {
-  transition: all 1.5s ease-out;
-}
-.card-anim-leave-active {
-  transition: all 0.5s cubic-bezier(1, 0.5, 0.8, 1);
-  position: absolute;
-}
-
-.card-anim-enter-from {
-  opacity: 0;
-  transform: translateY(150px) scale(1.5); /* Fly in from bottom */
-}
-.card-anim-leave-to {
-  opacity: 0;
-  transform: scale(0.1);
-}
-.card-anim-move {
-  transition: transform 1s ease;
-}
-
 .popup-enter-active,
 .popup-leave-active {
   transition: all 0.5s ease;
