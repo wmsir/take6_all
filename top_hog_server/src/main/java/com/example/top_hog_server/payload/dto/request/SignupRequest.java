@@ -19,8 +19,6 @@ public class SignupRequest {
     @Size(min = 6, max = 120, message = "密码长度必须在6到120个字符之间")
     private String password;
 
-    @NotBlank(message = "邮箱验证码不能为空")
-    @Size(min = 6, max = 6, message = "邮箱验证码必须为6位数字")
     private String emailVerificationCode; // 新增：邮箱验证码字段
 
     // Getters 和 Setters
