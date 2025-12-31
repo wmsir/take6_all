@@ -396,18 +396,18 @@ const handleMessage = (data) => {
         } else {
             tipMessage.value = `💡 ${data.message}`;
         }
-    } else if (data.type === 'promptToChooseRow') {
-        if (data.playerChoosingRowSessionId === mySessionId.value) {
-            choiceOptions.value = data.options;
-            cardLeadingToChoice.value = data.cardPlayed;
-            showChoiceArea.value = true;
-            choiceTimer.value = (data.timeout || 30000) / 1000;
-            if (choiceInterval) clearInterval(choiceInterval);
-            choiceInterval = setInterval(() => {
-                choiceTimer.value--;
-                if (choiceTimer.value <= 0) clearInterval(choiceInterval);
-            }, 1000);
-        }
+    } else if (data.type === 'needSelectRow') {
+        const payload = data.data;
+        choiceOptions.value = payload.options;
+        // Backend only sends number in needSelectRow payload
+        cardLeadingToChoice.value = { number: payload.cardNumber, bullheads: '?' };
+        showChoiceArea.value = true;
+        choiceTimer.value = (payload.timeout || 30000) / 1000;
+        if (choiceInterval) clearInterval(choiceInterval);
+        choiceInterval = setInterval(() => {
+            choiceTimer.value--;
+            if (choiceTimer.value <= 0) clearInterval(choiceInterval);
+        }, 1000);
     } else if (data.type === 'error') {
         errorMessage.value = data.message;
         isWaitingForTurnProcessing.value = false;
@@ -765,6 +765,7 @@ onUnmounted(() => {
     display: flex;
     justify-content: center;
     align-items: center;
+    pointer-events: none;
 }
 .player-choice-area {
     border: 2px solid #f57c00;
@@ -772,6 +773,7 @@ onUnmounted(() => {
     padding: 30px;
     max-width: 500px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    pointer-events: auto;
 }
 .row-choice-control {
     margin-right: 10px;
