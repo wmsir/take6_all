@@ -47,19 +47,19 @@
             <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
             <div v-if="joiningFeedback" class="joining-feedback">{{ joiningFeedback }}</div>
 
-             <!-- Choice Area -->
+            <!-- Choice Area (Inline Alert) -->
             <Transition name="popup">
-                <div v-if="showChoiceArea" class="choice-overlay-modal">
-                     <div class="player-choice-area section">
-                        <h3>请选择您要收取的牌列</h3>
-                        <p>您打出的牌: <strong>{{ cardLeadingToChoice ? `${cardLeadingToChoice.number} (🐂${cardLeadingToChoice.bullheads})` : '' }}</strong></p>
-                        <p>请在 <strong style="color: red;">{{ choiceTimer }}</strong> 秒内点击对应牌列前的“选择此行”按钮：</p>
+                <div v-if="showChoiceArea" class="choice-alert-area">
+                    <h3>请选择您要收取的牌列</h3>
+                    <div class="choice-alert-content">
+                        <p>您打出的牌: <strong class="highlight-card">{{ cardLeadingToChoice ? `${cardLeadingToChoice.number} (🐂${cardLeadingToChoice.bullheads})` : '' }}</strong></p>
+                        <p>请在 <strong style="color: red;">{{ choiceTimer }}</strong> 秒内点击对应牌列前的“选择此行”按钮。</p>
                     </div>
                 </div>
             </Transition>
 
             <!-- Game Rows -->
-            <h3>桌面牌列:</h3>
+            <h3 v-if="!showChoiceArea">桌面牌列:</h3>
             <div class="game-rows">
                 <div v-for="(row, index) in gameRows" :key="index" class="game-row">
                     <!-- Choice Button -->
@@ -758,34 +758,67 @@ onUnmounted(() => {
 }
 
 /* Choice */
-.choice-overlay-modal {
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background-color: rgba(0,0,0,0.5);
-    z-index: 900;
+.choice-alert-area {
+    background-color: #fffde7;
+    border: 3px solid #f57c00;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    text-align: center;
+    animation: flashBorder 2s infinite;
+}
+.choice-alert-content {
     display: flex;
     justify-content: center;
+    gap: 20px;
     align-items: center;
-    pointer-events: none;
+    flex-wrap: wrap;
 }
-.player-choice-area {
-    border: 2px solid #f57c00;
-    background-color: #fffde7;
-    padding: 30px;
-    max-width: 500px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    pointer-events: auto;
+@keyframes flashBorder {
+    0% { border-color: #f57c00; box-shadow: 0 0 5px #f57c00; }
+    50% { border-color: #ffb74d; box-shadow: 0 0 15px #ffb74d; }
+    100% { border-color: #f57c00; box-shadow: 0 0 5px #f57c00; }
 }
+
+.highlight-card {
+    font-size: 1.2em;
+    color: #d35400;
+    background-color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid #e67e22;
+}
+
 .row-choice-control {
     margin-right: 10px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
+    animation: pulse 1.5s infinite;
 }
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
 .select-row-button {
     background-color: #ffa000;
-    padding: 4px 8px;
-    font-size: 0.8em;
+    color: white;
+    padding: 8px 12px;
+    font-size: 0.9em;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.select-row-button:hover {
+    background-color: #ff8f00;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.25);
 }
 
 /* Overlay */
