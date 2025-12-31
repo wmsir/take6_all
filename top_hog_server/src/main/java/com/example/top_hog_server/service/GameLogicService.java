@@ -569,11 +569,23 @@ public class GameLogicService {
 
         // 检查是否有活跃的人类玩家，以确定我们是否应该暂停为人类托管玩家自动出牌
         long activeHumans = room.getPlayers().values().stream().filter(p -> !p.isRobot() && !p.isTrustee()).count();
-        long disconnectedHumans = room.getPlayers().values().stream().filter(p -> !p.isRobot() && p.isTrustee()).count();
-        boolean shouldPauseForHumanTrustees = (activeHumans == 0 && disconnectedHumans > 0);
+        // 这里的 "disconnectedHumans" 实际上是指处于托管状态的人类玩家（无论是否连接）
+        long humanTrustees = room.getPlayers().values().stream().filter(p -> !p.isRobot() && p.isTrustee()).count();
+
+        // 进一步检查托管的人类玩家中，是否有仍然保持WebSocket连接的（即开启了托管但仍在线观看）
+        long connectedHumanTrustees = room.getPlayers().values().stream()
+                .filter(p -> !p.isRobot() && p.isTrustee())
+                .filter(p -> {
+                    WebSocketSession s = gameWebSocketHandler.getSessionById(p.getSessionId());
+                    return s != null && s.isOpen();
+                })
+                .count();
+
+        // 只有当没有活跃手动玩家，且没有在线观看的托管玩家时，才暂停（即所有人类都断线了）
+        boolean shouldPauseForHumanTrustees = (activeHumans == 0 && connectedHumanTrustees == 0 && humanTrustees > 0);
 
         if (shouldPauseForHumanTrustees) {
-            logger.info("房间 {} 中无活跃人类玩家，将暂停为断线人类托管玩家自动出牌，等待重连。", room.getRoomId());
+            logger.info("房间 {} 中无活跃人类玩家且无在线托管玩家，将暂停为断线人类托管玩家自动出牌，等待重连。", room.getRoomId());
         }
 
         // 为所有未出牌的机器人或托管玩家自动出牌
