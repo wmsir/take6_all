@@ -420,8 +420,11 @@ public class GameLogicService {
             room.getAllPlayerHandsForAI().remove(sessionId);
         }
 
-        if (room.getPlayers().isEmpty()) {
-            logger.info("房间 {} 已空，将被移除。", room.getRoomId());
+        boolean hasHumanPlayers = room.getPlayers().values().stream()
+                .anyMatch(p -> !p.isRobot());
+
+        if (!hasHumanPlayers) {
+            logger.info("房间 {} 已无人类玩家，将被移除。", room.getRoomId());
             gameRoomService.removeRoom(room.getRoomId());
             roomLocks.remove(room.getRoomId());
         } else {

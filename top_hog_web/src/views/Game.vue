@@ -32,9 +32,10 @@
                 <button v-if="isMyPlayerHost && gameState === 'WAITING'" @click="addBot">添加机器人</button>
                 <button v-if="canStartGame" @click="startGame">开始游戏</button>
                 <button @click="toggleAutoPlay"
-                        :class="['ready-button', { 'is-ready': isMyPlayerBot }]"
+                        :class="['trustee-button', { 'trustee-active': isMyPlayerBot }]"
                         v-if="myPlayer">
-                    {{ isMyPlayerBot ? '取消托管' : '开启托管' }}
+                    <span class="trustee-icon">{{ isMyPlayerBot ? '🤖' : '👤' }}</span>
+                    {{ isMyPlayerBot ? '托管中 (点击取消)' : '开启托管' }}
                 </button>
                 <button @click="leaveRoom">离开房间</button>
                 <button v-if="gameState === 'GAME_OVER'"
@@ -82,7 +83,12 @@
             </div>
 
             <!-- Hand -->
-            <h3>我的手牌 ({{ myHand.length }} 张):</h3>
+            <h3>
+                我的手牌 ({{ myHand.length }} 张) -
+                <span :class="['my-name-display', { 'trustee-highlight': isMyPlayerBot }]">
+                    {{ myPlayer ? myPlayer.displayName : '加载中...' }}
+                </span>
+            </h3>
             <div class="player-hand">
                 <div v-if="myHand.length === 0" style="width: 100%; text-align: center;">(无手牌)</div>
                 <div v-else
@@ -248,14 +254,14 @@ const isMe = (player) => {
 
 const isMyPlayerHost = computed(() => myPlayer.value?.isHost);
 const isMyPlayerReady = computed(() => myPlayer.value?.isReady);
-const isMyPlayerBot = computed(() => myPlayer.value?.is托管);
+const isMyPlayerBot = computed(() => myPlayer.value?.isTrustee);
 const hasRequestedNewGame = computed(() => myPlayer.value?.requestedNewGame);
 
 const canStartGame = computed(() => {
     if (gameState.value !== 'WAITING') return false;
-    if (!myPlayer.value || myPlayer.value.is托管) return false;
+    if (!myPlayer.value || myPlayer.value.isTrustee) return false;
     // Check if at least 2 humans are ready
-    const humans = playerList.value.filter(p => !p.is托管);
+    const humans = playerList.value.filter(p => !p.isTrustee);
     const readyHumans = humans.filter(p => p.isReady);
     return humans.length >= 2 && readyHumans.length === humans.length;
 });
@@ -264,7 +270,7 @@ const canPlayCard = computed(() => {
     return gameState.value === 'PLAYING' &&
            !isWaitingForTurnProcessing.value &&
            myPlayer.value &&
-           !myPlayer.value.is托管 &&
+           !myPlayer.value.isTrustee &&
            selectedCard.value;
 });
 
@@ -272,7 +278,7 @@ const canGetTip = computed(() => {
     return gameState.value === 'PLAYING' &&
            !isWaitingForTurnProcessing.value &&
            myPlayer.value &&
-           !myPlayer.value.is托管;
+           !myPlayer.value.isTrustee;
 });
 
 const showChoiceButtons = computed(() => {
@@ -545,14 +551,14 @@ const closeVictoryOverlay = () => {
 };
 
 const getStatusColor = (player) => {
-    if (player.is托管) return '#7f8c8d';
+    if (player.isTrustee) return '#9b59b6'; // Purple for trustee
     if (gameState.value === 'WAITING') return player.isReady ? 'green' : 'orange';
     if (gameState.value === 'GAME_OVER') return player.requestedNewGame ? 'purple' : 'black';
     return 'black';
 };
 
 const getStatusText = (player) => {
-    if (player.is托管) return '(托管中)';
+    if (player.isTrustee) return '(托管中)';
     if (gameState.value === 'WAITING') return player.isReady ? '(已准备)' : '(未准备)';
     if (gameState.value === 'GAME_OVER') return player.requestedNewGame ? '(想再来一局)' : '(游戏结束)';
     return '';
@@ -614,6 +620,40 @@ onUnmounted(() => {
 }
 .ready-button { background-color: #ef5350; }
 .ready-button.is-ready { background-color: #4caf50; }
+
+.trustee-button {
+    background-color: #90a4ae;
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+    transition: all 0.3s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+.trustee-button.trustee-active {
+    background-color: #9b59b6;
+    box-shadow: 0 0 10px #9b59b6;
+    transform: scale(1.05);
+}
+.trustee-icon { font-size: 1.2em; }
+
+.my-name-display {
+    color: #2c3e50;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+.trustee-highlight {
+    color: #9b59b6;
+    background-color: #f3e5f5;
+    border: 1px solid #e1bee7;
+    animation: pulse 2s infinite;
+}
 
 /* Game Rows */
 .game-rows {
