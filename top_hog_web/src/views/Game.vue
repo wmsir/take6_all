@@ -430,8 +430,10 @@ const updateGameState = (state) => {
     roomInfo.playerChoosingRowSessionId = state.playerChoosingRowSessionId;
 
     // Handle Game Over Overlay logic
+    // If we transition OUT of GAME_OVER, clear the sessionStorage acknowledgement
     if (gameState.value === 'GAME_OVER' && state.gameState !== 'GAME_OVER') {
         victoryOverlayManuallyClosed.value = false;
+        sessionStorage.removeItem(`victory_ack_${roomId}`);
     }
 
     gameState.value = state.gameState;
@@ -463,8 +465,14 @@ const updateGameState = (state) => {
          const winnerName = state.winnerDisplayName || "某人";
          const msg = state.message || "游戏结束";
          victoryMessage.value = msg.includes("获胜") ? msg : `游戏结束! ${winnerName} 获胜!`;
-         if (!victoryOverlayManuallyClosed.value) {
+
+         // Check if already acknowledged in this session
+         const isAck = sessionStorage.getItem(`victory_ack_${roomId}`);
+
+         if (!victoryOverlayManuallyClosed.value && !isAck) {
              showVictoryOverlay.value = true;
+         } else {
+             showVictoryOverlay.value = false;
          }
     } else {
         showVictoryOverlay.value = false;
@@ -548,6 +556,7 @@ const playAgain = () => {
 const closeVictoryOverlay = () => {
     showVictoryOverlay.value = false;
     victoryOverlayManuallyClosed.value = true;
+    sessionStorage.setItem(`victory_ack_${roomId}`, 'true');
 };
 
 const getStatusColor = (player) => {
