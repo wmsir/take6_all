@@ -26,6 +26,7 @@ public class GameRoomDTO {
     private List<GameRowDTO> rows;
     private Map<String, Card> playedCardsThisTurn;
     private String winnerDisplayName;
+    private String playerChoosingRowSessionId;
 
     public static GameRoomDTO from(GameRoom room, String requestingUserId) {
         GameRoomDTO dto = new GameRoomDTO();
@@ -37,6 +38,7 @@ public class GameRoomDTO {
         dto.setTargetScore(room.getTargetScore());
         dto.setCurrentRound(room.getCurrentRound());
         dto.setCurrentTurnNumber(room.getCurrentTurnNumber());
+        dto.setPlayerChoosingRowSessionId(room.getPlayerChoosingRowSessionId());
 
         // Transform GameRow to GameRowDTO to include display flags
         List<GameRowDTO> rowDTOs = new ArrayList<>();
