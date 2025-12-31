@@ -276,8 +276,9 @@ const canGetTip = computed(() => {
 });
 
 const showChoiceButtons = computed(() => {
-    return gameState.value === 'WAITING_FOR_PLAYER_CHOICE' &&
-           roomInfo.playerChoosingRowSessionId === mySessionId.value;
+    // If showChoiceArea is true, it means we received 'needSelectRow', so we should show buttons.
+    // This avoids sync issues with gameState or playerChoosingRowSessionId.
+    return showChoiceArea.value;
 });
 
 // Methods
