@@ -398,6 +398,27 @@ public class GameLogicService {
             }
 
             if (leavingPlayer != null && sessionIdToRemove != null) {
+                // 检查是否为房主
+                if (leavingPlayer.isHost()) {
+                    logger.info("房主 {} (用户ID: {}) 请求离开房间 {}。销毁房间。", leavingPlayer.getDisplayName(), userId, roomId);
+
+                    // 广播房间解散消息
+                    Map<String, Object> closedMsg = new HashMap<>();
+                    closedMsg.put("type", "roomClosed");
+                    closedMsg.put("message", "房主已关闭房间，即将返回大厅。");
+                    closedMsg.put("roomId", roomId);
+                    try {
+                        gameWebSocketHandler.broadcastToRoom(roomId, closedMsg);
+                    } catch (IOException e) {
+                        logger.error("Failed to broadcast roomClosed message", e);
+                    }
+
+                    // 销毁房间
+                    gameRoomService.removeRoom(roomId);
+                    roomLocks.remove(roomId);
+                    return;
+                }
+
                 logger.info("玩家 {} (用户ID: {}) 明确请求离开房间 {}。", leavingPlayer.getDisplayName(), userId, roomId);
                 // 标记明确离开
                 leavingPlayer.setPendingLeave(true);
