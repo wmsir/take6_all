@@ -643,6 +643,7 @@
   color: #f1f5f9;
   font-weight: 500;
   transition: all 0.3s ease;
+  border: 2rpx solid transparent;
 }
 
 .hosting-btn.hosting-active {
@@ -650,6 +651,17 @@
   color: #ffffff;
   font-weight: 600;
   box-shadow: 0 4rpx 12rpx rgba(245, 158, 11, 0.4);
+  border: 2rpx solid #fbbf24;
+  animation: hostingPulse 2s ease-in-out infinite;
+}
+
+@keyframes hostingPulse {
+  0%, 100% {
+    box-shadow: 0 4rpx 12rpx rgba(245, 158, 11, 0.4);
+  }
+  50% {
+    box-shadow: 0 4rpx 16rpx rgba(245, 158, 11, 0.6);
+  }
 }
 
 .cancel-btn {

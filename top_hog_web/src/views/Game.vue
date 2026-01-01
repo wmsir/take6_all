@@ -631,10 +631,10 @@ onUnmounted(() => {
 .ready-button.is-ready { background-color: #4caf50; }
 
 .trustee-button {
-    background-color: #90a4ae;
+    background: linear-gradient(135deg, #90a4ae 0%, #78909c 100%);
     color: white;
     padding: 8px 15px;
-    border: none;
+    border: 2px solid transparent;
     border-radius: 20px;
     cursor: pointer;
     display: flex;
@@ -645,9 +645,19 @@ onUnmounted(() => {
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 .trustee-button.trustee-active {
-    background-color: #9b59b6;
-    box-shadow: 0 0 10px #9b59b6;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border: 2px solid #fbbf24;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5);
     transform: scale(1.05);
+    animation: trusteeGlow 2s ease-in-out infinite;
+}
+@keyframes trusteeGlow {
+    0%, 100% {
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5);
+    }
+    50% {
+        box-shadow: 0 4px 16px rgba(245, 158, 11, 0.7);
+    }
 }
 .trustee-icon { font-size: 1.2em; }
 
