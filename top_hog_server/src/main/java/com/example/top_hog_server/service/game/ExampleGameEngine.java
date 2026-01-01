@@ -231,7 +231,7 @@ public class ExampleGameEngine implements GameEngine {
         // 2. 如果是玩家回合，自动执行默认动作
         // 3. 通知其他玩家
         
-        player.setIsBot(true); // 自动托管
+        player.setRobot(true); // 自动托管
     }
     
     @Override
@@ -242,7 +242,7 @@ public class ExampleGameEngine implements GameEngine {
         // 2. 同步当前游戏状态
         // 3. 通知其他玩家
         
-        player.setIsBot(false); // 取消托管
+        player.setRobot(false); // 取消托管
     }
     
     @Override
