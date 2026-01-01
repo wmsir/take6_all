@@ -163,4 +163,27 @@ public class GameRoomService {
                         room.getPlayers().size() < room.getMaxPlayers())
                 .collect(Collectors.toList());
     }
+
+    /**
+     * 快速匹配：自动加入第一个有空位的公开房间
+     * 如果没有可用房间，则抛出异常
+     */
+    public GameRoom quickMatch() {
+        // 获取所有可用的公开房间（非私密房间且有空位）
+        List<GameRoom> availableRooms = activeRooms.values().stream()
+                .filter(room -> room.getGameState() == GameState.WAITING &&
+                        room.getPlayers().size() < room.getMaxPlayers() &&
+                        !room.isPrivate())
+                .collect(Collectors.toList());
+
+        if (availableRooms.isEmpty()) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "No available rooms for quick match");
+        }
+
+        // 选择第一个可用房间
+        GameRoom room = availableRooms.get(0);
+        
+        // 加入该房间（不需要密码，因为是公开房间）
+        return joinRoom(room.getRoomId(), "");
+    }
 }

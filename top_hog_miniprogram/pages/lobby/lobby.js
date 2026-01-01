@@ -142,6 +142,54 @@ Page({
   },
 
   /**
+   * 快速匹配房间
+   */
+  handleQuickMatch() {
+    wx.showLoading({
+      title: '匹配中...'
+    });
+
+    roomApi.quickMatch()
+      .then((data) => {
+        // 保存当前房间信息
+        app.globalData.currentRoom = data;
+        wx.setStorageSync('currentRoom', data);
+
+        wx.hideLoading();
+        wx.showToast({
+          title: '匹配成功',
+          icon: 'success'
+        });
+
+        // 跳转到房间页面 (TabBar page)
+        setTimeout(() => {
+          wx.switchTab({
+            url: '/pages/room/room'
+          });
+        }, 500);
+      })
+      .catch((error) => {
+        wx.hideLoading();
+        console.error('快速匹配失败:', error);
+        
+        // 如果没有可用房间，提示用户
+        wx.showModal({
+          title: '匹配失败',
+          content: error.message || '当前没有可用的房间，是否创建新房间？',
+          confirmText: '创建房间',
+          cancelText: '取消',
+          success: (res) => {
+            if (res.confirm) {
+              wx.navigateTo({
+                url: '/pages/room_create/room_create'
+              });
+            }
+          }
+        });
+      });
+  },
+
+  /**
    * 通过房间号加入
    */
   handleJoinByCode() {

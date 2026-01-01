@@ -154,8 +154,8 @@
 }
 
 .action-card.join {
-  background: linear-gradient(145deg, rgba(30, 41, 59, 0.8) 0%, rgba(30, 41, 59, 0.4) 100%);
-  border-color: #334155;
+  background: linear-gradient(145deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.03) 100%);
+  border-color: rgba(16, 185, 129, 0.25);
 }
 
 .action-header {
@@ -182,7 +182,8 @@
 
 .join-icon {
   background: #334155;
-  color: #10b981;
+  color: #fbbf24;
+  font-size: 32rpx;
 }
 
 .action-tag {
@@ -193,6 +194,10 @@
 
 .create .action-tag {
   color: #10b981;
+}
+
+.join .action-tag {
+  color: #fbbf24;
 }
 
 .action-title {

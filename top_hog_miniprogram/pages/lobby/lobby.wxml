@@ -49,14 +49,14 @@
         <text class="action-desc">自定义人数与结束规则</text>
       </view>
     </view>
-    <view class="action-card join" bindtap="handleShowJoinModal">
+    <view class="action-card join" bindtap="handleQuickMatch">
       <view class="action-header">
-        <view class="action-icon join-icon">#</view>
-        <text class="action-tag">房间号进入</text>
+        <view class="action-icon join-icon">⚡</view>
+        <text class="action-tag">自动匹配</text>
       </view>
       <view class="action-text">
-        <text class="action-title">加入房间</text>
-        <text class="action-desc">输入房间号或点击好友邀请</text>
+        <text class="action-title">实时匹配</text>
+        <text class="action-desc">自动加入有空余位置的房间</text>
       </view>
     </view>
   </view>
