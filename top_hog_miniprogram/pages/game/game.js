@@ -250,6 +250,22 @@ Page({
       console.log('WebSocket连接成功，准备调用 fetchGameState，roomId:', roomId);
       setTimeout(() => {
         this.fetchGameState(roomId);
+        
+        // 检查是否需要自动发送requestNewGame
+        if (app.globalData.autoRequestNewGame) {
+          console.log('[GAME] 检测到autoRequestNewGame标志，发送requestNewGame消息');
+          this.sendSocketMsg({
+            type: 'requestNewGame',
+            roomId: String(roomId)
+          });
+          // 清除标志
+          app.globalData.autoRequestNewGame = false;
+          wx.showToast({
+            title: '正在开始新游戏...',
+            icon: 'loading',
+            duration: 2000
+          });
+        }
       }, 500); // 延迟500ms，确保joinRoom消息已发送并服务器已响应
     });
 
@@ -485,8 +501,15 @@ Page({
     // 因此不能用 isCurrentTurn 控制出牌权限；改为"未出牌且未托管即可出牌"
     const canPlay = roomState.gameState === 'PLAYING'
       && !(currentPlayer && currentPlayer.hasPlayed)
-      && !(currentPlayer && currentPlayer.is托管);
+      && !(currentPlayer && currentPlayer.isTrustee);
     const playerHand = (currentPlayer && currentPlayer.hand || []).sort((a, b) => a.number - b.number);
+    
+    // 同步托管状态：更新本地isHosting状态与服务器isTrustee保持一致
+    if (currentPlayer && currentPlayer.isTrustee !== undefined) {
+      if (this.data.isHosting !== currentPlayer.isTrustee) {
+        this.setData({ isHosting: currentPlayer.isTrustee });
+      }
+    }
     
     console.log('[GAME] 手牌处理结果:', {
       playerHand: playerHand,
