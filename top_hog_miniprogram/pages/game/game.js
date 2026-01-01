@@ -282,8 +282,8 @@ Page({
         // 兼容两种消息类型
         const roomState = msg.roomState || msg.data;
         this.handleRoomUpdate(roomState);
-      } else if (msg.type === 'chat') {
-        this.handleChatMessage(msg.data || msg);
+      } else if (msg.type === 'chat' || msg.type === 'chatMessage') {
+        this.handleChatMessage(msg);
       } else if (msg.type === 'error') {
         // 服务端错误时，避免前端一直"出牌中"
         this.setData({ isProcessing: false });
@@ -677,11 +677,41 @@ Page({
     }, 1000);
   },
 
-  handleChatMessage(message) {
-    const messages = [...this.data.chatMessages, message];
+  handleChatMessage(msg) {
+    const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
+    const myUserId = userInfo.id;
+
+    // Normalize
+    const senderId = msg.sender || msg.userIdentifier || (msg.data && msg.data.sender);
+    const content = msg.text || msg.content || (msg.data && msg.data.text);
+
+    if (!content) return;
+
+    let senderName = 'Unknown';
+    if (senderId) {
+      const player = this.data.players.find(p =>
+        String(p.id) === String(senderId) ||
+        String(p.userId) === String(senderId)
+      );
+      if (player) {
+          senderName = player.displayName || player.nickname;
+      } else if (String(senderId) === String(myUserId)) {
+          senderName = userInfo.nickname || '我';
+      } else {
+          senderName = `玩家 ${senderId}`;
+      }
+    }
+
+    const newMsg = {
+        sender: senderName,
+        text: content,
+        id: Date.now() + Math.random()
+    };
+
+    const messages = [...this.data.chatMessages, newMsg];
     this.setData({
       chatMessages: messages,
-      lastMessageId: `msg-${message.id}`
+      lastMessageId: `msg-${newMsg.id}`
     });
   },
 

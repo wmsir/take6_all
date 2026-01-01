@@ -215,7 +215,7 @@ Page({
 
       if (msg.type === 'gameStateUpdate') {
         this.handleRoomUpdate(msg);
-      } else if (msg.type === 'chat') {
+      } else if (msg.type === 'chat' || msg.type === 'chatMessage') {
         this.handleNewChatMessage(msg);
       } else if (msg.type === 'error') {
         wx.showToast({ title: msg.message || msg.data || '发生错误', icon: 'none' });
@@ -870,37 +870,56 @@ Page({
       type: 'chat',
       roomId: this.data.roomId,
       userIdentifier: userIdentifier,
-      content: content
+      data: {
+        text: content
+      }
     });
  
     // Clear input
     this.setData({
       inputValue: ''
     });
-
-    // Optimistically append (optional, but good for responsiveness)
-    // Actually, usually we wait for server echo to confirm order,
-    // but here we can just wait for the 'chat' message type to come back if the server echoes it.
-    // If server echoes, we don't need to append here to avoid duplicates.
-    // Assuming server echoes:
-    // this.handleNewChatMessage({ type: 'chat', userIdentifier, content });
   },
 
   /**
    * Handle incoming chat message
    */
   handleNewChatMessage(msg) {
-    const newMsg = {
-      sender: msg.userIdentifier || 'Unknown',
-      content: msg.content,
-      isMe: (msg.userIdentifier === (this.data.hostName || '') || msg.userIdentifier === this.data.players.find(p => p.isMe)?.nickname)
-      // Note: isMe logic is approximate here, relying on identifier match
-    };
-
-    // Better isMe check: 使用用户ID匹配
     const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
-    const userId = userInfo.id;
-    newMsg.isMe = (msg.userIdentifier === userId || msg.userIdentifier === String(userId));
+    const myUserId = userInfo.id;
+
+    // Normalize fields
+    // msg.sender (from chatMessage) or msg.userIdentifier (old chat)
+    const senderId = msg.sender || msg.userIdentifier || (msg.data && msg.data.sender);
+    // msg.text (from chatMessage) or msg.content (old chat)
+    const content = msg.text || msg.content || (msg.data && msg.data.text);
+
+    if (!content) return;
+
+    // Try to find sender name
+    let senderName = 'Unknown';
+    if (senderId) {
+        // Check players list
+        const player = this.data.players.find(p =>
+            String(p.id) === String(senderId) ||
+            String(p.userId) === String(senderId)
+        );
+        if (player) {
+            senderName = player.displayName || player.nickname;
+        } else if (String(senderId) === String(myUserId)) {
+            senderName = userInfo.nickname || '我';
+        } else {
+             senderName = `玩家 ${senderId}`;
+        }
+    }
+
+    const isMe = (String(senderId) === String(myUserId));
+
+    const newMsg = {
+      sender: senderName,
+      content: content,
+      isMe: isMe
+    };
 
     const messages = [...this.data.chatMessages, newMsg];
     this.setData({
