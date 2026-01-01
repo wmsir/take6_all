@@ -36,7 +36,7 @@
     <!-- Action Buttons (Moved above player list) -->
     <view class="action-buttons-section">
       <button class="action-btn secondary {{isMeReady ? 'active' : ''}}" bindtap="handleReady">
-        {{isMeReady ? '取消准备' : '我已准备'}}
+        {{isMeReady ? '取消准备' : '准备'}}
       </button>
 
       <button class="action-btn primary {{canStartGame && isHost ? '' : 'disabled'}}" bindtap="handleStartGame" disabled="{{!canStartGame || !isHost}}">
