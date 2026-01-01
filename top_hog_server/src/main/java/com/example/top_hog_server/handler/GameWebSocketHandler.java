@@ -273,7 +273,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                     if (roomId != null) {
                         logger.info("用户 {} (会话 {}) 主动离开房间 {}", userId, session.getId(), roomId);
                         removeSessionFromRoom(roomId, session.getId());
-                        gameLogicService.playerLeavesRaw(roomId, session.getId(), userId);
+                        // Use playerRequestsLeave to properly mark as explicit leave
+                        gameLogicService.playerRequestsLeave(roomId, userId);
                         Map<String, Object> leftRoomMap = new HashMap<>();
                         leftRoomMap.put("type", "leftRoomSuccess");
                         leftRoomMap.put("roomId", roomId);
