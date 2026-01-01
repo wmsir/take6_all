@@ -1,159 +1,201 @@
 <template>
   <div class="game-container">
-    <h1>牛头王 (Take 6!) - 房间: {{ roomInfo.roomName }}</h1>
-
-    <div class="music-control">
-         <button @click="toggleMusic">{{ isMusicPlaying ? '🎵 关闭背景音乐' : '🎵 开启背景音乐' }}</button>
-         <!-- Hidden audio elements -->
-         <audio ref="bgmAudio" loop src="/background.mp3"></audio>
-         <audio ref="sfxAudio" src="/placeholder.mp3"></audio>
-    </div>
-
-    <!-- Victory Overlay -->
-    <div v-if="showVictoryOverlay" class="victory-overlay">
-        <div class="victory-message-content">
-            <div class="victory-message">{{ victoryMessage }}</div>
-            <button class="close-victory-button" @click="closeVictoryOverlay">关闭</button>
+    <div class="game-header">
+        <h1>牛头王 (Take 6!) - {{ roomInfo.roomName }}</h1>
+        <div class="header-controls">
+             <button class="icon-button" @click="toggleMusic" :title="isMusicPlaying ? '关闭音乐' : '开启音乐'">
+                {{ isMusicPlaying ? '🔊' : '🔇' }}
+             </button>
+             <div class="player-count-badge">
+                👥 {{ playerCount }}/{{ maxPlayers }}
+             </div>
         </div>
     </div>
 
-    <!-- Game Area -->
+    <!-- Audio (Hidden) -->
+    <audio ref="bgmAudio" loop src="/background.mp3"></audio>
+    <audio ref="sfxAudio" src="/placeholder.mp3"></audio>
+
+    <!-- Victory Overlay -->
+    <Transition name="fade">
+        <div v-if="showVictoryOverlay" class="victory-overlay">
+            <div class="victory-card">
+                <div class="victory-icon">🏆</div>
+                <h2>游戏结束</h2>
+                <p class="victory-text">{{ victoryMessage }}</p>
+                <button class="btn btn-primary btn-large" @click="closeVictoryOverlay">关闭</button>
+            </div>
+        </div>
+    </Transition>
+
     <div class="game-layout">
-        <div class="game-main-content">
-             <!-- Controls -->
-            <div class="game-controls">
-                <div class="player-count-info">房间玩家: {{ playerCount }}/{{ maxPlayers }}</div>
-                <button v-if="gameState === 'WAITING'"
-                        :class="['ready-button', { 'is-ready': isMyPlayerReady }]"
-                        @click="toggleReady"
-                        :disabled="isMyPlayerBot">
-                    {{ isMyPlayerReady ? '取消准备' : '准备' }}
-                </button>
-                <button v-if="isMyPlayerHost && gameState === 'WAITING'" @click="addBot">添加机器人</button>
-                <button v-if="canStartGame" @click="startGame">开始游戏</button>
-                <button @click="toggleAutoPlay"
-                        :class="['trustee-button', { 'trustee-active': isMyPlayerBot }]"
-                        v-if="myPlayer">
-                    <span class="trustee-icon">{{ isMyPlayerBot ? '🤖' : '👤' }}</span>
-                    {{ isMyPlayerBot ? '取消托管' : '开启托管' }}
-                </button>
-                <button @click="leaveRoom">离开房间</button>
-                <button v-if="gameState === 'GAME_OVER'"
-                        @click="playAgain"
-                        :disabled="hasRequestedNewGame">
-                    {{ hasRequestedNewGame ? '已请求新局' : '再来一局' }}
-                </button>
+        <!-- Main Game Area -->
+        <div class="game-main">
+             <!-- Top Controls / Status -->
+            <div class="control-bar">
+                <div class="left-controls">
+                    <button v-if="gameState === 'WAITING'"
+                            :class="['btn', isMyPlayerReady ? 'btn-danger' : 'btn-success']"
+                            @click="toggleReady"
+                            :disabled="isMyPlayerBot">
+                        {{ isMyPlayerReady ? '取消准备' : '准备' }}
+                    </button>
+                    <button v-if="isMyPlayerHost && gameState === 'WAITING'" class="btn btn-secondary" @click="addBot">
+                        + 机器人
+                    </button>
+                    <button v-if="canStartGame" class="btn btn-primary" @click="startGame">
+                        开始游戏
+                    </button>
+                </div>
+
+                <div class="right-controls">
+                    <!-- Trustee Button: Only visible when game is NOT waiting -->
+                    <button @click="toggleAutoPlay"
+                            :class="['btn', isMyPlayerBot ? 'btn-danger' : 'btn-info', 'trustee-btn']"
+                            v-if="myPlayer && gameState !== 'WAITING'">
+                        <span class="btn-icon">{{ isMyPlayerBot ? '🤖' : '🎮' }}</span>
+                        {{ isMyPlayerBot ? '取消托管' : '开启托管' }}
+                    </button>
+
+                    <button v-if="gameState === 'GAME_OVER'"
+                            class="btn btn-primary"
+                            @click="playAgain"
+                            :disabled="hasRequestedNewGame">
+                        {{ hasRequestedNewGame ? '已请求' : '再来一局' }}
+                    </button>
+
+                    <button class="btn btn-outline" @click="leaveRoom">离开</button>
+                </div>
             </div>
 
-            <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
-            <div v-if="joiningFeedback" class="joining-feedback">{{ joiningFeedback }}</div>
+            <!-- Messages -->
+            <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
+            <div v-if="joiningFeedback" class="alert alert-info">{{ joiningFeedback }}</div>
 
-            <!-- Choice Area (Inline Alert) -->
-            <Transition name="popup">
-                <div v-if="showChoiceArea" class="choice-alert-area">
-                    <h3>请选择您要收取的牌列</h3>
-                    <div class="choice-alert-content">
-                        <p>您打出的牌: <strong class="highlight-card">{{ cardLeadingToChoice ? `${cardLeadingToChoice.number} (🐂${cardLeadingToChoice.bullheads})` : '' }}</strong></p>
-                        <p>请在 <strong style="color: red;">{{ choiceTimer }}</strong> 秒内点击对应牌列前的“选择此行”按钮。</p>
+            <!-- Choice Area -->
+            <Transition name="slide-down">
+                <div v-if="showChoiceArea" class="choice-panel">
+                    <h3>⚠️ 请选择要收取的牌列</h3>
+                    <div class="choice-info">
+                        <p>您打出的牌: <span class="card-badge">{{ cardLeadingToChoice ? `${cardLeadingToChoice.number}` : '' }} <small>🐂{{ cardLeadingToChoice ? cardLeadingToChoice.bullheads : '' }}</small></span></p>
+                        <p class="timer-text">剩余时间: {{ choiceTimer }}s</p>
                     </div>
                 </div>
             </Transition>
 
-            <!-- Game Rows -->
-            <h3 v-if="!showChoiceArea">桌面牌列:</h3>
-            <div class="game-rows">
-                <div v-for="(row, index) in gameRows" :key="index" class="game-row">
-                    <!-- Choice Button -->
-                    <div v-if="showChoiceButtons && choiceOptions.some(opt => opt.rowIndex === index)" class="row-choice-control">
-                        <span class="row-bullhead-info">(🐂 {{ getChoiceBullheads(index) }})</span>
-                        <button class="select-row-button" @click="chooseRow(index)">选择此行</button>
+            <!-- Board (Rows) -->
+            <div class="board-area">
+                <div v-for="(row, index) in gameRows" :key="index" class="board-row" :class="{ 'row-selectable': showChoiceButtons && choiceOptions.some(opt => opt.rowIndex === index) }">
+                    <div class="row-header">
+                        <span class="row-label">行 {{ index + 1 }}</span>
+                        <span class="row-bullheads" v-if="row.cards && row.cards.length > 0">
+                           🐂 {{ row.cards.reduce((acc, c) => acc + c.bullheads, 0) }}
+                        </span>
                     </div>
 
-                    <div class="game-row-content">
-                        <strong>行 {{ index + 1 }}: </strong>
-                        <div class="cards-container">
-                            <div v-for="card in row.cards" :key="card.number" class="card">
-                                <span class="number">{{ card.number }}</span>
-                                <span class="bullheads">🐂 {{ card.bullheads }}</span>
-                            </div>
+                    <div class="row-cards">
+                        <div v-for="card in row.cards" :key="card.number" class="game-card">
+                            <div class="card-top">{{ card.number }}</div>
+                            <div class="card-center">🐂</div>
+                            <div class="card-bottom">{{ card.bullheads }}</div>
                         </div>
-                        <span v-if="!row.cards || row.cards.length === 0">(空)</span>
+                        <div v-if="!row.cards || row.cards.length === 0" class="empty-slot">Empty</div>
+                    </div>
+
+                    <!-- Selection Overlay for Choice -->
+                    <div v-if="showChoiceButtons && choiceOptions.some(opt => opt.rowIndex === index)" class="row-overlay">
+                         <button class="btn btn-warning select-row-btn" @click="chooseRow(index)">
+                             选择此行 (+{{ getChoiceBullheads(index) }} 🐂)
+                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Hand -->
-            <h3>
-                我的手牌 ({{ myHand.length }} 张) -
-                <span :class="['my-name-display', { 'trustee-highlight': isMyPlayerBot }]">
-                    {{ myPlayer ? myPlayer.displayName : '加载中...' }}
-                </span>
-            </h3>
-            <div class="player-hand">
-                <div v-if="myHand.length === 0" style="width: 100%; text-align: center;">(无手牌)</div>
-                <div v-else
-                     v-for="card in sortedHand"
-                     :key="card.number"
-                     :class="['card', 'clickable', { 'highlighted': selectedCard && selectedCard.number === card.number }]"
-                     @click="selectCard(card)">
-                    <span class="number">{{ card.number }}</span>
-                    <span class="bullheads">🐂 {{ card.bullheads }}</span>
+            <!-- Player Hand -->
+            <div class="hand-area">
+                <div class="hand-header">
+                    <h3>我的手牌</h3>
+                     <div class="my-info">
+                        <span class="player-badge" :class="{ 'is-trustee': isMyPlayerBot }">
+                            {{ myPlayer ? myPlayer.displayName : 'Loading...' }}
+                        </span>
+                     </div>
                 </div>
-            </div>
 
-            <div class="play-card-action">
-                <button @click="playCard" :disabled="!canPlayCard">出牌</button>
-                <button @click="getTip" :disabled="!canGetTip" class="tip-btn">💡 获取提示</button>
-            </div>
-            <div v-if="tipMessage" class="tip-message-area">{{ tipMessage }}</div>
+                <div class="hand-cards">
+                     <div v-if="myHand.length === 0" class="no-cards">无手牌</div>
+                     <div v-else
+                          v-for="card in sortedHand"
+                          :key="card.number"
+                          :class="['game-card', 'hand-card', { 'selected': selectedCard && selectedCard.number === card.number }]"
+                          @click="selectCard(card)">
+                         <div class="card-top">{{ card.number }}</div>
+                         <div class="card-center">🐂</div>
+                         <div class="card-bottom">{{ card.bullheads }}</div>
+                     </div>
+                </div>
 
+                <div class="action-bar">
+                    <button class="btn btn-action" @click="playCard" :disabled="!canPlayCard">
+                        出牌
+                    </button>
+                    <button class="btn btn-outline-warning" @click="getTip" :disabled="!canGetTip">
+                        💡 提示
+                    </button>
+                </div>
+                <div v-if="tipMessage" class="tip-bubble">{{ tipMessage }}</div>
+            </div>
         </div>
 
+        <!-- Sidebar -->
         <div class="game-sidebar">
-             <!-- Player List -->
-            <div class="section player-list-container">
-                <h3>房间内玩家:</h3>
-                <ul class="player-list">
-                    <li v-for="player in playerList" :key="player.sessionId"
-                        :style="{ fontWeight: isMe(player) ? 'bold' : 'normal', color: isMe(player) ? 'red' : 'inherit' }">
-                        <span class="player-details">
-                            <span v-if="player.isHost" title="房主">🏠</span>
-                            <strong>{{ player.displayName }}</strong>
-                            <span v-if="player.isHost" style="color: #f39c12; font-size: 0.8em; margin-left: 5px;">(房主)</span>
-                            - 牛头: {{ player.score || 0 }}, 手牌: {{ player.hand ? player.hand.length : '?' }}
-                        </span>
-                        <span class="player-status" :style="{ color: getStatusColor(player) }">
-                            {{ getStatusText(player) }}
-                        </span>
+            <div class="sidebar-panel player-panel">
+                <h3>玩家列表</h3>
+                <ul class="player-list-items">
+                    <li v-for="player in playerList" :key="player.sessionId" class="player-item" :class="{ 'is-me': isMe(player) }">
+                        <div class="player-info-row">
+                            <span class="player-name">
+                                <span v-if="player.isHost">👑</span>
+                                {{ player.displayName }}
+                            </span>
+                            <span class="player-score">🐂 {{ player.score || 0 }}</span>
+                        </div>
+                        <div class="player-status-row">
+                             <span class="status-tag" :class="getStatusClass(player)">
+                                 {{ getStatusText(player) }}
+                             </span>
+                             <span class="card-count">🎴 {{ player.hand ? player.hand.length : '?' }}</span>
+                        </div>
                     </li>
                 </ul>
             </div>
 
-            <!-- Chat -->
-            <div class="section chat-area">
-                <h3>房间聊天</h3>
-                <div class="chat-messages" ref="chatBox">
-                    <div v-for="(msg, i) in chatMessages" :key="i">
-                        <strong>{{ msg.senderName }}:</strong> {{ msg.text }}
+            <div class="sidebar-panel chat-panel">
+                <h3>聊天</h3>
+                <div class="chat-window" ref="chatBox">
+                    <div v-for="(msg, i) in chatMessages" :key="i" class="chat-msg">
+                        <span class="chat-sender">{{ msg.senderName }}:</span>
+                        <span class="chat-text">{{ msg.text }}</span>
                     </div>
                 </div>
-                <select v-model="quickChat" @change="handleQuickChat">
-                    <option value="">-- 选择快捷语句 --</option>
-                    <option v-for="txt in quickChatOptions" :key="txt" :value="txt">{{ txt }}</option>
-                </select>
-                <div class="chat-input-container">
-                    <input v-model="chatInput" @keypress.enter="sendChat" placeholder="输入聊天内容..." />
-                    <button @click="sendChat">发送</button>
+                <div class="chat-controls">
+                    <select v-model="quickChat" @change="handleQuickChat" class="quick-chat-select">
+                        <option value="">快捷语...</option>
+                        <option v-for="txt in quickChatOptions" :key="txt" :value="txt">{{ txt }}</option>
+                    </select>
+                    <div class="input-group">
+                        <input v-model="chatInput" @keypress.enter="sendChat" placeholder="说点什么..." />
+                        <button @click="sendChat" class="btn-small">发送</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Server Log -->
-             <div class="section log-area">
-                <h3>服务器日志</h3>
-                <div class="server-messages" ref="logBox">
-                     <div v-for="(log, i) in logs" :key="i" class="message-entry">{{ log }}</div>
-                </div>
-             </div>
+            <div class="sidebar-panel log-panel">
+                 <h3>日志</h3>
+                 <div class="log-window" ref="logBox">
+                      <div v-for="(log, i) in logs" :key="i" class="log-entry">{{ log }}</div>
+                 </div>
+            </div>
         </div>
     </div>
   </div>
@@ -166,7 +208,6 @@ import api from '../services/api';
 
 const route = useRoute();
 const router = useRouter();
-// Make roomId reactive by using a computed or ref that updates
 const roomId = ref(route.params.roomId);
 const userInfo = reactive(JSON.parse(localStorage.getItem('user_info') || '{}'));
 
@@ -180,7 +221,7 @@ const logBox = ref(null);
 const ws = ref(null);
 const isConnected = ref(false);
 const roomInfo = reactive({ roomName: '', roomId: '' });
-const gameState = ref('WAITING'); // WAITING, PLAYING, GAME_OVER, WAITING_FOR_PLAYER_CHOICE, PROCESSING_TURN
+const gameState = ref('WAITING');
 const gameRows = ref([]);
 const players = ref({});
 const mySessionId = ref(null);
@@ -243,7 +284,6 @@ const maxPlayers = computed(() => roomInfo.maxPlayers || 10);
 const myPlayer = computed(() => {
     if (!players.value) return null;
     return Object.values(players.value).find(p => {
-        // Match by sessionId if available, otherwise by userId or displayName as fallback
         if (mySessionId.value && p.sessionId === mySessionId.value) return true;
         if (userInfo.id && p.userId && String(p.userId) === String(userInfo.id)) return true;
         return false;
@@ -262,7 +302,6 @@ const hasRequestedNewGame = computed(() => myPlayer.value?.requestedNewGame);
 const canStartGame = computed(() => {
     if (gameState.value !== 'WAITING') return false;
     if (!myPlayer.value || myPlayer.value.isTrustee) return false;
-    // Check if at least 2 humans are ready
     const humans = playerList.value.filter(p => !p.isTrustee);
     const readyHumans = humans.filter(p => p.isReady);
     return humans.length >= 2 && readyHumans.length === humans.length;
@@ -284,26 +323,16 @@ const canGetTip = computed(() => {
 });
 
 const showChoiceButtons = computed(() => {
-    // If showChoiceArea is true, it means we received 'needSelectRow', so we should show buttons.
-    // This avoids sync issues with gameState or playerChoosingRowSessionId.
     return showChoiceArea.value;
 });
 
 // Methods
-
 const addLog = (msg) => {
     const time = new Date().toLocaleTimeString();
     logs.value.push(`[${time}] ${msg}`);
     nextTick(() => {
         if (logBox.value) logBox.value.scrollTop = logBox.value.scrollHeight;
     });
-};
-
-const playSound = (type = 'action') => {
-    if (sfxAudio.value) {
-        sfxAudio.value.currentTime = 0;
-        sfxAudio.value.play().catch(e => console.warn("SFX error", e));
-    }
 };
 
 const toggleMusic = () => {
@@ -314,7 +343,7 @@ const toggleMusic = () => {
     } else {
         bgmAudio.value.play().catch(e => {
             console.warn("BGM error", e);
-            alert("无法播放背景音乐，请检查文件或浏览器设置。");
+            alert("无法播放背景音乐");
         });
         isMusicPlaying.value = true;
     }
@@ -326,16 +355,14 @@ const connect = () => {
         router.push('/login');
         return;
     }
-    // Note: The backend expects 'userIdentifier' to be the numeric User ID
     const wsUrl = `ws://${window.location.hostname}:8088/ws-game?userIdentifier=${userInfo.id}`;
-    addLog(`Connecting to ${wsUrl}`);
+    addLog(`Connecting...`);
 
     ws.value = new WebSocket(wsUrl);
 
     ws.value.onopen = () => {
-        addLog("WebSocket Open");
+        addLog("Connected");
         isConnected.value = true;
-        // Join Room automatically
         send({ type: 'joinRoom', roomId: roomId.value });
     };
 
@@ -345,19 +372,12 @@ const connect = () => {
             handleMessage(data);
         } catch (e) {
             console.error(e);
-            addLog("Error parsing message: " + event.data);
         }
     };
 
     ws.value.onclose = () => {
-        addLog("WebSocket Closed");
+        addLog("Disconnected");
         isConnected.value = false;
-        // Maybe handle reconnect
-    };
-
-    ws.value.onerror = (e) => {
-        console.error(e);
-        addLog("WebSocket Error");
     };
 };
 
@@ -370,7 +390,6 @@ const send = (msg) => {
 const handleMessage = (data) => {
     if (data.type === 'connectionAcknowledged') {
         mySessionId.value = data.sessionId;
-        addLog(`Session ID: ${data.sessionId}`);
         if (data.vipStatus !== undefined) {
              userInfo.vipStatus = data.vipStatus;
              localStorage.setItem('user_info', JSON.stringify(userInfo));
@@ -379,12 +398,10 @@ const handleMessage = (data) => {
         updateGameState(data.roomState);
         if (data.message) addLog(data.message);
     } else if (data.type === 'rejoinSuccess') {
-        addLog("Rejoined successfully");
+        addLog("Rejoined");
         if (data.roomState) updateGameState(data.roomState);
     } else if (data.type === 'chatMessage') {
-        // Need to resolve sender name
         const senderId = data.sender;
-        // Try to find player name
         let name = "Unknown";
         if (players.value) {
              const p = Object.values(players.value).find(p => String(p.userId) === String(senderId));
@@ -398,17 +415,15 @@ const handleMessage = (data) => {
     } else if (data.type === 'playTipResponse') {
         if (data.success && data.tip) {
             const tip = data.tip;
-            tipMessage.value = `💡 AI建议: 打出 ${tip.suggestedCardNumber} (预计牛头: ${tip.estimatedBullheads}). ${tip.reason}`;
-            // Auto select
+            tipMessage.value = `AI建议: ${tip.suggestedCardNumber} (预计牛头: ${tip.estimatedBullheads}). ${tip.reason}`;
             const card = myHand.value.find(c => c.number === tip.suggestedCardNumber);
             if (card) selectCard(card);
         } else {
-            tipMessage.value = `💡 ${data.message}`;
+            tipMessage.value = `${data.message}`;
         }
     } else if (data.type === 'needSelectRow') {
         const payload = data.data;
         choiceOptions.value = payload.options;
-        // Backend only sends number in needSelectRow payload
         cardLeadingToChoice.value = { number: payload.cardNumber, bullheads: '?' };
         showChoiceArea.value = true;
         choiceTimer.value = (payload.timeout || 30000) / 1000;
@@ -434,8 +449,6 @@ const updateGameState = (state) => {
     roomInfo.maxPlayers = state.maxPlayers;
     roomInfo.playerChoosingRowSessionId = state.playerChoosingRowSessionId;
 
-    // Handle Game Over Overlay logic
-    // If we transition OUT of GAME_OVER, clear the sessionStorage acknowledgement
     if (gameState.value === 'GAME_OVER' && state.gameState !== 'GAME_OVER') {
         victoryOverlayManuallyClosed.value = false;
         sessionStorage.removeItem(`victory_ack_${roomId.value}`);
@@ -445,17 +458,13 @@ const updateGameState = (state) => {
     gameRows.value = state.rows || [];
     players.value = state.players || {};
 
-    // Update Hand
     if (myPlayer.value && myPlayer.value.hand) {
-        // Only update hand if changed to avoid jumpy UI, or just update always since it's simple
         myHand.value = myPlayer.value.hand;
     } else {
         myHand.value = [];
     }
 
-    // Reset processing flag if state changes (e.g. next turn)
     if (isWaitingForTurnProcessing.value && state.gameState === 'PLAYING') {
-         // This is a bit simplistic, ideally we check turn number
          isWaitingForTurnProcessing.value = false;
          joiningFeedback.value = '';
     }
@@ -465,15 +474,11 @@ const updateGameState = (state) => {
         if (choiceInterval) clearInterval(choiceInterval);
     }
 
-    // Victory
     if (state.gameState === 'GAME_OVER') {
          const winnerName = state.winnerDisplayName || "某人";
          const msg = state.message || "游戏结束";
          victoryMessage.value = msg.includes("获胜") ? msg : `游戏结束! ${winnerName} 获胜!`;
-
-         // Check if already acknowledged in this session
          const isAck = sessionStorage.getItem(`victory_ack_${roomId.value}`);
-
          if (!victoryOverlayManuallyClosed.value && !isAck) {
              showVictoryOverlay.value = true;
          } else {
@@ -499,9 +504,7 @@ const toggleAutoPlay = () => {
 const addBot = async () => {
     try {
         const response = await api.post('/room/add-bots', { roomId: roomId.value, botCount: 1 });
-        if (response.data.code !== 200) {
-            alert(response.data.message);
-        }
+        if (response.data.code !== 200) alert(response.data.message);
     } catch (e) {
         alert(e.response?.data?.message || '添加机器人失败');
     }
@@ -517,7 +520,7 @@ const playCard = () => {
     isWaitingForTurnProcessing.value = true;
     joiningFeedback.value = "正在出牌...";
     send({ type: 'playCard', roomId: roomId.value, data: { cardNumber: selectedCard.value.number } });
-    selectedCard.value = null; // Clear selection
+    selectedCard.value = null;
 };
 
 const getTip = () => {
@@ -525,7 +528,7 @@ const getTip = () => {
 };
 
 const chooseRow = (rowIndex) => {
-    send({ type: 'selectRow', roomId: roomId.value, rowIndex: rowIndex }); // Backend supports 'selectRow' with direct 'rowIndex' or 'playerChoosesRow'
+    send({ type: 'selectRow', roomId: roomId.value, rowIndex: rowIndex });
     showChoiceArea.value = false;
 };
 
@@ -550,7 +553,6 @@ const sendChat = () => {
 const leaveRoom = () => {
     if (confirm("确定要离开房间吗？")) {
         send({ type: 'leaveRoom', roomId: roomId.value });
-        // Client side navigation happens on 'leftRoomSuccess'
     }
 };
 
@@ -564,18 +566,18 @@ const closeVictoryOverlay = () => {
     sessionStorage.setItem(`victory_ack_${roomId.value}`, 'true');
 };
 
-const getStatusColor = (player) => {
-    if (player.isTrustee) return '#9b59b6'; // Purple for trustee
-    if (gameState.value === 'WAITING') return player.isReady ? 'green' : 'orange';
-    if (gameState.value === 'GAME_OVER') return player.requestedNewGame ? 'purple' : 'black';
-    return 'black';
+const getStatusClass = (player) => {
+    if (player.isTrustee) return 'status-trustee';
+    if (gameState.value === 'WAITING') return player.isReady ? 'status-ready' : 'status-not-ready';
+    if (gameState.value === 'GAME_OVER') return player.requestedNewGame ? 'status-again' : 'status-ended';
+    return '';
 };
 
 const getStatusText = (player) => {
-    if (player.isTrustee) return '(托管中)';
-    if (gameState.value === 'WAITING') return player.isReady ? '(已准备)' : '(未准备)';
-    if (gameState.value === 'GAME_OVER') return player.requestedNewGame ? '(想再来一局)' : '(游戏结束)';
-    return '';
+    if (player.isTrustee) return '托管中';
+    if (gameState.value === 'WAITING') return player.isReady ? '已准备' : '未准备';
+    if (gameState.value === 'GAME_OVER') return player.requestedNewGame ? '想再来' : '结束';
+    return '游戏';
 };
 
 onMounted(() => {
@@ -586,24 +588,16 @@ onUnmounted(() => {
     if (ws.value) ws.value.close();
 });
 
-// Watch for route parameter changes to handle room switching
 watch(
   () => route.params.roomId,
   (newRoomId, oldRoomId) => {
     if (newRoomId && newRoomId !== oldRoomId) {
-      addLog(`Switching room from ${oldRoomId} to ${newRoomId}`);
-
-      // Update roomId ref
       roomId.value = newRoomId;
-
-      // Close existing connection
       if (ws.value) {
         ws.value.close();
         ws.value = null;
         isConnected.value = false;
       }
-
-      // Reset State
       chatMessages.value = [];
       logs.value = [];
       players.value = {};
@@ -611,8 +605,6 @@ watch(
       myHand.value = [];
       selectedCard.value = null;
       gameState.value = 'WAITING';
-
-      // Reconnect
       nextTick(() => {
         connect();
       });
@@ -622,342 +614,335 @@ watch(
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
 .game-container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
-    background-color: #f0f2f5;
+    background-color: #f3f4f6;
     min-height: 100vh;
+    font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #374151;
 }
-.music-control {
-    text-align: center;
+
+/* Header */
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 20px;
+    background: white;
+    padding: 15px 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
+.game-header h1 {
+    font-size: 1.5rem;
+    margin: 0;
+    color: #111827;
+}
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.icon-button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.icon-button:hover { transform: scale(1.1); }
+.player-count-badge {
+    background-color: #e5e7eb;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
 /* Layout */
 .game-layout {
     display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
+    gap: 25px;
 }
-.game-main-content {
+.game-main {
     flex: 3;
-    min-width: 450px;
     display: flex;
     flex-direction: column;
+    gap: 20px;
 }
 .game-sidebar {
-    flex: 2;
+    flex: 1;
     min-width: 300px;
     display: flex;
     flex-direction: column;
+    gap: 20px;
 }
 
-/* Controls */
-.game-controls {
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-.player-count-info {
-    font-weight: bold;
-    background-color: #e0e0e0;
-    padding: 8px 12px;
-    border-radius: 4px;
-}
-.ready-button { background-color: #ef5350; }
-.ready-button.is-ready { background-color: #4caf50; }
-
-.trustee-button {
-    background: linear-gradient(135deg, #90a4ae 0%, #78909c 100%);
-    color: white;
-    padding: 8px 15px;
-    border: 2px solid transparent;
-    border-radius: 20px;
+/* Buttons */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
     cursor: pointer;
-    display: flex;
+    transition: all 0.2s;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    font-weight: bold;
-    transition: all 0.3s;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-.trustee-button.trustee-active {
-    background: linear-gradient(135deg, #ef5350 0%, #c62828 100%);
-    border: 2px solid #ffcdd2;
-    box-shadow: 0 4px 12px rgba(229, 57, 53, 0.5);
-    transform: scale(1.05);
-    animation: trusteeGlow 2s ease-in-out infinite;
-}
-@keyframes trusteeGlow {
-    0%, 100% {
-        box-shadow: 0 4px 12px rgba(229, 57, 53, 0.5);
-    }
-    50% {
-        box-shadow: 0 4px 16px rgba(229, 57, 53, 0.7);
-    }
-}
-.trustee-icon { font-size: 1.2em; }
-
-.my-name-display {
-    color: #2c3e50;
-    font-weight: bold;
-    padding: 2px 8px;
-    border-radius: 4px;
-}
-.trustee-highlight {
-    color: #9b59b6;
-    background-color: #f3e5f5;
-    border: 1px solid #e1bee7;
-    animation: pulse 2s infinite;
-}
-
-/* Game Rows */
-.game-rows {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 15px;
-    padding: 10px;
-    border: 1px solid #b0bec5;
-    border-radius: 4px;
-    background-color: #eceff1;
-    min-height: 200px;
-}
-.game-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px;
-    background-color: #cfd8dc;
-    border-radius: 3px;
-    min-height: 100px;
-    position: relative;
-}
-.game-row-content {
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
-    flex-grow: 1;
-    overflow: visible; /* Allow animations to fly in from outside if needed */
-}
-.cards-container {
-    display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    align-items: center;
-    flex-grow: 1;
-    min-height: 85px; /* Ensure height for animation */
-}
-
-/* Animations */
-.popup-enter-active,
-.popup-leave-active {
-  transition: all 0.5s ease;
-}
-.popup-enter-from,
-.popup-leave-to {
-  opacity: 0;
-  transform: scale(0.5) translateY(-50px);
-}
-
-/* Card */
-.card {
-    width: 55px;
-    height: 80px;
-    border: 1px solid #546e7a;
-    border-radius: 5px;
-    background-color: white;
-    display: flex;
-    flex-direction: column;
     justify-content: center;
-    align-items: center;
-    font-weight: bold;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    margin: 2px;
-    flex-shrink: 0;
-    user-select: none;
-}
-.card .number { font-size: 20px; }
-.card .bullheads { font-size: 11px; color: #d32f2f; }
-.card.clickable { cursor: pointer; transition: transform 0.1s; }
-.card.clickable:hover { transform: translateY(-3px); }
-.card.highlighted { border: 2px solid #f57c00; box-shadow: 0 0 8px #f57c00; transform: scale(1.05); }
-
-/* Hand */
-.player-hand {
-    display: flex;
-    flex-wrap: wrap;
     gap: 8px;
-    padding: 10px;
-    border: 1px solid #a5d6a7;
-    border-radius: 4px;
-    min-height: 95px;
-    background-color: #e8f5e9;
-    margin-bottom: 15px;
-    justify-content: center;
 }
-.play-card-action {
-    text-align: center;
-    margin-top: 10px;
-}
-.tip-btn { background-color: #f39c12; margin-left: 10px; }
-.tip-message-area {
-    margin-top: 8px;
-    padding: 8px;
-    background-color: #e9ecef;
-    border-left: 3px solid #f39c12;
-    border-radius: 4px;
-}
+.btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+.btn:active:not(:disabled) { transform: translateY(0); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* Sidebar */
-.section {
-    margin-bottom: 15px;
-    padding: 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    background-color: #f9f9f9;
-}
-.player-list {
-    list-style: none;
-    padding: 0;
-    max-height: 250px;
-    overflow-y: auto;
-}
-.player-list li {
-    padding: 10px 8px;
-    border-bottom: 1px solid #f0f0f0;
+.btn-primary { background-color: #4f46e5; color: white; }
+.btn-secondary { background-color: #6b7280; color: white; }
+.btn-success { background-color: #10b981; color: white; }
+.btn-danger { background-color: #ef4444; color: white; }
+.btn-warning { background-color: #f59e0b; color: black; }
+.btn-info { background-color: #3b82f6; color: white; }
+.btn-outline { background: transparent; border: 1px solid #9ca3af; color: #4b5563; }
+.btn-outline-warning { background: white; border: 1px solid #f59e0b; color: #d97706; }
+.btn-action { background-color: #4f46e5; color: white; font-size: 1.1rem; padding: 12px 30px; box-shadow: 0 4px 6px rgba(79, 70, 229, 0.3); }
+
+.btn-small { padding: 5px 10px; font-size: 0.85rem; background-color: #4f46e5; color: white; }
+
+/* Control Bar */
+.control-bar {
     display: flex;
     justify-content: space-between;
-}
-
-/* Chat */
-.chat-area { display: flex; flex-direction: column; height: 350px; }
-.chat-messages {
-    flex-grow: 1;
-    overflow-y: auto;
-    border: 1px solid #ccc;
-    padding: 10px;
     background: white;
-    margin-bottom: 10px;
-    text-align: left;
-}
-.chat-input-container { display: flex; gap: 8px; }
-.chat-input-container input { flex: 1; margin-bottom: 0; }
-
-/* Log */
-.server-messages {
-    height: 120px;
-    overflow-y: auto;
-    border: 1px solid #ccc;
-    background: white;
-    font-size: 0.8em;
-    padding: 5px;
-}
-
-/* Choice */
-.choice-alert-area {
-    background-color: #fffde7;
-    border: 3px solid #f57c00;
     padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    text-align: center;
-    animation: flashBorder 2s infinite;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
-.choice-alert-content {
+.left-controls, .right-controls { display: flex; gap: 10px; }
+
+/* Board */
+.board-area {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px;
+    background-color: #e0e7ff;
+    border-radius: 16px;
+    min-height: 300px;
+    border: 2px solid #c7d2fe;
+}
+.board-row {
+    display: flex;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.6);
+    padding: 10px;
+    border-radius: 10px;
+    position: relative;
+    transition: background 0.3s;
+}
+.board-row.row-selectable { background-color: #fff3cd; border: 2px dashed #f59e0b; }
+.row-header {
+    width: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-weight: bold;
+    color: #4b5563;
+    flex-shrink: 0;
+}
+.row-cards {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex-grow: 1;
+    padding-left: 10px;
+    border-left: 2px solid #e5e7eb;
+}
+.empty-slot { color: #9ca3af; font-style: italic; display: flex; align-items: center; height: 90px; }
+
+.row-overlay {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+}
+
+/* Cards */
+.game-card {
+    width: 60px;
+    height: 90px;
+    background-color: white;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    user-select: none;
+    font-weight: bold;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.game-card .card-top { align-self: flex-start; font-size: 0.9rem; }
+.game-card .card-center { color: #dc2626; font-size: 1.2rem; }
+.game-card .card-bottom { align-self: flex-end; font-size: 0.8rem; color: #dc2626; }
+
+.hand-card { cursor: pointer; height: 100px; width: 68px; }
+.hand-card:hover { transform: translateY(-10px); box-shadow: 0 5px 15px rgba(0,0,0,0.15); z-index: 5; }
+.hand-card.selected { border: 2px solid #4f46e5; transform: translateY(-15px); box-shadow: 0 8px 20px rgba(79, 70, 229, 0.25); z-index: 10; }
+
+/* Hand Area */
+.hand-area {
+    background: white;
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+.hand-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+.player-badge {
+    background-color: #f3f4f6;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+.player-badge.is-trustee { background-color: #f3e8ff; color: #9333ea; border: 1px solid #d8b4fe; }
+
+.hand-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    min-height: 110px;
+}
+.no-cards { color: #9ca3af; margin-top: 30px; }
+
+.action-bar {
     display: flex;
     justify-content: center;
     gap: 20px;
+    margin-top: 20px;
     align-items: center;
-    flex-wrap: wrap;
 }
-@keyframes flashBorder {
-    0% { border-color: #f57c00; box-shadow: 0 0 5px #f57c00; }
-    50% { border-color: #ffb74d; box-shadow: 0 0 15px #ffb74d; }
-    100% { border-color: #f57c00; box-shadow: 0 0 5px #f57c00; }
-}
-
-.highlight-card {
-    font-size: 1.2em;
-    color: #d35400;
-    background-color: white;
-    padding: 2px 8px;
-    border-radius: 4px;
-    border: 1px solid #e67e22;
+.tip-bubble {
+    background-color: #fffbeb;
+    color: #b45309;
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 15px;
+    text-align: center;
+    border: 1px solid #fcd34d;
 }
 
-.row-choice-control {
-    margin-right: 10px;
-    flex-shrink: 0;
+/* Sidebar Panels */
+.sidebar-panel {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    animation: pulse 1.5s infinite;
 }
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
-
-.select-row-button {
-    background-color: #ffa000;
-    color: white;
-    padding: 8px 12px;
-    font-size: 0.9em;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-.select-row-button:hover {
-    background-color: #ff8f00;
-    transform: translateY(-1px);
-    box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+.sidebar-panel h3 {
+    margin: 0;
+    padding: 15px;
+    background-color: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 1.1rem;
 }
 
-/* Overlay */
-.victory-overlay {
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background-color: rgba(0,0,0,0.75);
-    z-index: 1000;
+/* Player List */
+.player-list-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+.player-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid #f3f4f6;
+}
+.player-item.is-me { background-color: #eff6ff; }
+.player-info-row { display: flex; justify-content: space-between; font-weight: 500; margin-bottom: 5px; }
+.player-status-row { display: flex; justify-content: space-between; font-size: 0.85rem; color: #6b7280; }
+.status-tag { padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; }
+.status-ready { background-color: #d1fae5; color: #065f46; }
+.status-not-ready { background-color: #fee2e2; color: #991b1b; }
+.status-trustee { background-color: #f3e8ff; color: #6b21a8; }
+
+/* Chat */
+.chat-window {
+    height: 300px;
+    overflow-y: auto;
+    padding: 15px;
     display: flex;
-    justify-content: center;
-    align-items: center;
+    flex-direction: column;
+    gap: 8px;
 }
-.victory-message-content {
-    background: rgba(0,0,0,0.8);
-    padding: 40px;
-    border-radius: 15px;
+.chat-msg { font-size: 0.9rem; }
+.chat-sender { font-weight: bold; margin-right: 5px; color: #4b5563; }
+.chat-controls { padding: 15px; border-top: 1px solid #e5e7eb; background-color: #f9fafb; display: flex; flex-direction: column; gap: 8px; }
+.quick-chat-select, .input-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    outline: none;
+}
+.input-group { display: flex; gap: 8px; }
+.input-group input { flex: 1; }
+
+/* Logs */
+.log-window {
+    height: 150px;
+    overflow-y: auto;
+    padding: 10px;
+    font-size: 0.8rem;
+    color: #6b7280;
+    font-family: monospace;
+}
+.log-entry { margin-bottom: 4px; }
+
+/* Alerts */
+.alert { padding: 10px; border-radius: 6px; margin-bottom: 15px; }
+.alert-error { background-color: #fee2e2; color: #991b1b; }
+.alert-info { background-color: #dbeafe; color: #1e40af; }
+
+/* Choice Panel */
+.choice-panel {
+    background-color: #fff7ed;
+    border: 2px solid #f97316;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
     text-align: center;
 }
-.victory-message {
-    color: #ffd700;
-    font-size: 2.5em;
-    margin-bottom: 20px;
-}
-.close-victory-button {
-    background-color: #e67e22;
-    padding: 10px 30px;
-    font-size: 1.2em;
-}
+.card-badge { font-weight: bold; color: #c2410c; }
+.timer-text { color: #c2410c; font-weight: bold; margin-top: 5px; }
 
-.error-message {
-    background-color: #ffebee;
-    color: #c62828;
-    padding: 10px;
-    border-radius: 4px;
-    margin-bottom: 10px;
+/* Victory */
+.victory-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100;
+    display: flex; align-items: center; justify-content: center;
 }
-.joining-feedback {
-    background-color: #fff3e0;
-    color: #ef6c00;
-    padding: 10px;
-    border-radius: 4px;
-    margin-bottom: 10px;
+.victory-card {
+    background: white; padding: 40px; border-radius: 20px; text-align: center; max-width: 500px; width: 90%;
+}
+.victory-icon { font-size: 4rem; margin-bottom: 20px; }
+.victory-text { font-size: 1.5rem; margin-bottom: 30px; }
+
+/* Responsive */
+@media (max-width: 900px) {
+    .game-layout { flex-direction: column; }
+    .game-sidebar { width: 100%; }
 }
 </style>
