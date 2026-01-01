@@ -422,6 +422,9 @@ const handleMessage = (data) => {
         setTimeout(() => errorMessage.value = '', 5000);
     } else if (data.type === 'leftRoomSuccess') {
         router.push('/lobby');
+    } else if (data.type === 'roomClosed') {
+        alert(data.message || "房间已关闭");
+        router.push('/lobby');
     }
 };
 
