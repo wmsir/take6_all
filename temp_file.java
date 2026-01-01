@@ -1886,4 +1886,29 @@ public class GameLogicService {
         return new EstimatedPlayResult(bullheadsTaken, reason);
     }
 
+    // Schedule room destruction if no active humans remain after delay
+    private void scheduleRoomDestructionIfEmpty(String roomId, long delayMs) {
+        taskScheduler.schedule(() -> {
+            GameRoom room = gameRoomService.getRoom(roomId);
+            if (room == null) return;
+
+            Lock roomLock = getRoomLock(roomId);
+            roomLock.lock();
+            try {
+                // Check if the single human is still disconnected (trustee)
+                long humanCount = room.getPlayers().values().stream().filter(p -> !p.isRobot()).count();
+                boolean humanIsConnected = room.getPlayers().values().stream()
+                        .filter(p -> !p.isRobot())
+                        .anyMatch(p -> !p.isTrustee());
+
+                if (humanCount <= 1 && !humanIsConnected) {
+                     logger.info("Timeout reached: Room {} still has no active humans (Single player mode). Destroying.", roomId);
+                     gameRoomService.removeRoom(roomId);
+                     roomLocks.remove(roomId);
+                }
+            } finally {
+                roomLock.unlock();
+            }
+        }, new Date(System.currentTimeMillis() + delayMs));
+    }
 }
