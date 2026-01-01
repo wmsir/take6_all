@@ -696,9 +696,29 @@ Page({
     
     // 通过WebSocket通知服务器托管状态变化
     const roomId = this.getEffectiveRoomId();
-    if (roomId && (this.data.wsConnected || socketOpen)) {
+    if (!roomId) {
+      wx.showToast({
+        title: '房间信息无效',
+        icon: 'none'
+      });
+      // 回滚状态
+      this.setData({ isHosting: !newHostingState });
+      return;
+    }
+    
+    if (this.data.wsConnected || socketOpen) {
       const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
       const userIdentifier = userInfo && (userInfo.id || userInfo.username || userInfo.nickname);
+      
+      if (!userIdentifier) {
+        wx.showToast({
+          title: '用户信息无效',
+          icon: 'none'
+        });
+        // 回滚状态
+        this.setData({ isHosting: !newHostingState });
+        return;
+      }
       
       this.sendSocketMsg({
         type: 'toggleHosting',

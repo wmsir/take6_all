@@ -624,7 +624,7 @@
 
 .hand-actions {
   display: flex;
-  gap: 12rpx;
+  gap: 12rpx; /* Reduced from 16rpx to 12rpx to accommodate the hosting button */
   margin-top: 16rpx;
 }
 

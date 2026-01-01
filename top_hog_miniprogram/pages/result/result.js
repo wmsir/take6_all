@@ -159,6 +159,17 @@ Page({
       });
     } else {
       // 游戏未结束，继续下一局
+      const roomId = this.data.roomId;
+      
+      // 验证 roomId
+      if (!roomId || typeof roomId !== 'string' || roomId.trim() === '') {
+        wx.showToast({
+          title: '房间ID无效',
+          icon: 'none'
+        });
+        return;
+      }
+      
       wx.showLoading({ title: '准备下一局...', mask: true });
       
       // 清空结算数据，但保留房间信息
@@ -171,9 +182,9 @@ Page({
         
         // 使用 redirectTo 替换当前页面，避免堆栈过深
         wx.redirectTo({
-          url: `/pages/game/game?roomId=${this.data.roomId}`,
+          url: `/pages/game/game?roomId=${encodeURIComponent(roomId)}`,
           success: () => {
-            console.log('[RESULT] 成功跳转到游戏页面，roomId:', this.data.roomId);
+            console.log('[RESULT] 成功跳转到游戏页面，roomId:', roomId);
           },
           fail: (err) => {
             console.error('[RESULT] 跳转失败:', err);
