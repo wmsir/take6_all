@@ -856,6 +856,13 @@ Page({
     if (!content) return;
 
     const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
+    if (!userInfo || !userInfo.id) {
+      wx.showToast({
+        title: '用户信息失效，请重新登录',
+        icon: 'none'
+      });
+      return;
+    }
     const userIdentifier = userInfo.id;
 
     // Send via WebSocket
