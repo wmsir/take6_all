@@ -35,7 +35,7 @@
                         :class="['trustee-button', { 'trustee-active': isMyPlayerBot }]"
                         v-if="myPlayer">
                     <span class="trustee-icon">{{ isMyPlayerBot ? '🤖' : '👤' }}</span>
-                    {{ isMyPlayerBot ? '托管中 (点击取消)' : '开启托管' }}
+                    {{ isMyPlayerBot ? '取消托管' : '开启托管' }}
                 </button>
                 <button @click="leaveRoom">离开房间</button>
                 <button v-if="gameState === 'GAME_OVER'"
@@ -114,7 +114,8 @@
             <div class="section player-list-container">
                 <h3>房间内玩家:</h3>
                 <ul class="player-list">
-                    <li v-for="player in playerList" :key="player.sessionId" :style="{ fontWeight: isMe(player) ? 'bold' : 'normal' }">
+                    <li v-for="player in playerList" :key="player.sessionId"
+                        :style="{ fontWeight: isMe(player) ? 'bold' : 'normal', color: isMe(player) ? 'red' : 'inherit' }">
                         <span class="player-details">
                             <span v-if="player.isHost" title="房主">🏠</span>
                             <strong>{{ player.displayName }}</strong>
@@ -645,18 +646,18 @@ onUnmounted(() => {
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 .trustee-button.trustee-active {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    border: 2px solid #fbbf24;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5);
+    background: linear-gradient(135deg, #ef5350 0%, #c62828 100%);
+    border: 2px solid #ffcdd2;
+    box-shadow: 0 4px 12px rgba(229, 57, 53, 0.5);
     transform: scale(1.05);
     animation: trusteeGlow 2s ease-in-out infinite;
 }
 @keyframes trusteeGlow {
     0%, 100% {
-        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5);
+        box-shadow: 0 4px 12px rgba(229, 57, 53, 0.5);
     }
     50% {
-        box-shadow: 0 4px 16px rgba(245, 158, 11, 0.7);
+        box-shadow: 0 4px 16px rgba(229, 57, 53, 0.7);
     }
 }
 .trustee-icon { font-size: 1.2em; }
