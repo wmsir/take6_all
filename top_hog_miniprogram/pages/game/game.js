@@ -1,6 +1,7 @@
 const app = getApp();
 const gameApi = require('../../api/gameApi.js');
 
+// Module-level variables for WebSocket connection state
 let socketOpen = false;
 let socketMsgQueue = [];
 let socketConnecting = false;

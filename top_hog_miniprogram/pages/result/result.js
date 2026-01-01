@@ -176,25 +176,26 @@ Page({
       app.globalData.gameResult = null;
       wx.removeStorageSync('gameResult');
       
-      // 延迟跳转，确保状态清理完成
+      // 延迟跳转，确保状态清理完成 (500ms delay for state cleanup)
+      const NAVIGATION_DELAY = 500;
       setTimeout(() => {
-        wx.hideLoading();
-        
         // 使用 redirectTo 替换当前页面，避免堆栈过深
         wx.redirectTo({
           url: `/pages/game/game?roomId=${encodeURIComponent(roomId)}`,
           success: () => {
             console.log('[RESULT] 成功跳转到游戏页面，roomId:', roomId);
+            wx.hideLoading();
           },
           fail: (err) => {
             console.error('[RESULT] 跳转失败:', err);
+            wx.hideLoading();
             wx.showToast({
               title: '跳转失败，请重试',
               icon: 'none'
             });
           }
         });
-      }, 500);
+      }, NAVIGATION_DELAY);
     }
   },
 
