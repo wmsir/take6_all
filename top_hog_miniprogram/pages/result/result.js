@@ -143,6 +143,14 @@ Page({
         cancelText: '留在这里',
         success: (res) => {
           if (res.confirm) {
+            // 清理所有游戏状态
+            app.globalData.gameResult = null;
+            app.globalData.gameState = null;
+            app.globalData.currentRoom = null;
+            wx.removeStorageSync('gameResult');
+            wx.removeStorageSync('gameState');
+            wx.removeStorageSync('currentRoom');
+            
             wx.switchTab({
               url: '/pages/lobby/lobby'
             });
@@ -151,17 +159,29 @@ Page({
       });
     } else {
       // 游戏未结束，继续下一局
-      wx.showLoading({ title: '准备下一局...' });
+      wx.showLoading({ title: '准备下一局...', mask: true });
       
-      // 清空结算数据
+      // 清空结算数据，但保留房间信息
       app.globalData.gameResult = null;
       wx.removeStorageSync('gameResult');
       
-      // 跳转回游戏页面
+      // 延迟跳转，确保状态清理完成
       setTimeout(() => {
         wx.hideLoading();
+        
+        // 使用 redirectTo 替换当前页面，避免堆栈过深
         wx.redirectTo({
-          url: `/pages/game/game?roomId=${this.data.roomId}`
+          url: `/pages/game/game?roomId=${this.data.roomId}`,
+          success: () => {
+            console.log('[RESULT] 成功跳转到游戏页面，roomId:', this.data.roomId);
+          },
+          fail: (err) => {
+            console.error('[RESULT] 跳转失败:', err);
+            wx.showToast({
+              title: '跳转失败，请重试',
+              icon: 'none'
+            });
+          }
         });
       }, 500);
     }

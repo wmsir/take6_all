@@ -126,6 +126,9 @@
       </scroll-view>
 
       <view class="hand-actions">
+        <button class="hosting-btn {{isHosting ? 'hosting-active' : ''}}" bindtap="handleToggleHosting">
+          {{isHosting ? '取消托管' : '开启托管'}}
+        </button>
         <button class="cancel-btn" bindtap="handleCancelSelect" disabled="{{!selectedCard}}">取消选择</button>
         <!-- 交互优化：允许点击，但在 JS 里做 canPlay 校验并提示原因 -->
         <button class="confirm-btn" bindtap="handlePlayCard" disabled="{{!selectedCard || isProcessing}}">

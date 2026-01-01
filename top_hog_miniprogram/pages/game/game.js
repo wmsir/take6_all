@@ -39,7 +39,9 @@ Page({
     selectedRowIndex: null,     // 已选择的行索引
     // 玩家网格布局相关
     allPlayersPlayed: false,    // 所有玩家是否都出完牌
-    emptySlots: []              // 空位数组（用于填充到10个位置）
+    emptySlots: [],             // 空位数组（用于填充到10个位置）
+    // 托管相关
+    isHosting: false            // 是否开启托管
   },
   // 节流：避免 onLoad/onShow/wsOpen 多处触发导致 getGameState 连续请求
   _fetchingGameState: false,
@@ -683,6 +685,41 @@ Page({
    */
   handleCancelSelect() {
     this.setData({ selectedCard: null });
+  },
+
+  /**
+   * 切换托管状态
+   */
+  handleToggleHosting() {
+    const newHostingState = !this.data.isHosting;
+    this.setData({ isHosting: newHostingState });
+    
+    // 通过WebSocket通知服务器托管状态变化
+    const roomId = this.getEffectiveRoomId();
+    if (roomId && (this.data.wsConnected || socketOpen)) {
+      const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
+      const userIdentifier = userInfo && (userInfo.id || userInfo.username || userInfo.nickname);
+      
+      this.sendSocketMsg({
+        type: 'toggleHosting',
+        roomId: String(roomId),
+        isHosting: newHostingState,
+        userIdentifier
+      });
+      
+      wx.showToast({
+        title: newHostingState ? '已开启托管' : '已取消托管',
+        icon: 'success',
+        duration: 1500
+      });
+    } else {
+      wx.showToast({
+        title: '连接中，请稍后重试',
+        icon: 'none'
+      });
+      // 回滚状态
+      this.setData({ isHosting: !newHostingState });
+    }
   },
 
   /**
