@@ -143,6 +143,14 @@ Page({
         cancelText: '留在这里',
         success: (res) => {
           if (res.confirm) {
+            // 清理所有游戏状态
+            app.globalData.gameResult = null;
+            app.globalData.gameState = null;
+            app.globalData.currentRoom = null;
+            wx.removeStorageSync('gameResult');
+            wx.removeStorageSync('gameState');
+            wx.removeStorageSync('currentRoom');
+            
             wx.switchTab({
               url: '/pages/lobby/lobby'
             });
@@ -151,19 +159,43 @@ Page({
       });
     } else {
       // 游戏未结束，继续下一局
-      wx.showLoading({ title: '准备下一局...' });
+      const roomId = this.data.roomId;
       
-      // 清空结算数据
+      // 验证 roomId
+      if (!roomId || typeof roomId !== 'string' || roomId.trim() === '') {
+        wx.showToast({
+          title: '房间ID无效',
+          icon: 'none'
+        });
+        return;
+      }
+      
+      wx.showLoading({ title: '准备下一局...', mask: true });
+      
+      // 清空结算数据，但保留房间信息
       app.globalData.gameResult = null;
       wx.removeStorageSync('gameResult');
       
-      // 跳转回游戏页面
+      // 延迟跳转，确保状态清理完成 (500ms delay for state cleanup)
+      const NAVIGATION_DELAY = 500;
       setTimeout(() => {
-        wx.hideLoading();
+        // 使用 redirectTo 替换当前页面，避免堆栈过深
         wx.redirectTo({
-          url: `/pages/game/game?roomId=${this.data.roomId}`
+          url: `/pages/game/game?roomId=${encodeURIComponent(roomId)}`,
+          success: () => {
+            console.log('[RESULT] 成功跳转到游戏页面，roomId:', roomId);
+            wx.hideLoading();
+          },
+          fail: (err) => {
+            console.error('[RESULT] 跳转失败:', err);
+            wx.hideLoading();
+            wx.showToast({
+              title: '跳转失败，请重试',
+              icon: 'none'
+            });
+          }
         });
-      }, 500);
+      }, NAVIGATION_DELAY);
     }
   },
 
