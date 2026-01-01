@@ -1282,9 +1282,14 @@ public class GameLogicService {
         roomLock.lock();
         try {
             Player p = room.getPlayers().get(session.getId());
-            if (p == null || p.isTrustee()) {
-                sendErrorToUserSession(session, roomId, "托管玩家无法请求。");
+            if (p == null) {
+                sendErrorToUserSession(session, roomId, "玩家未找到。");
                 return;
+            }
+            // 如果玩家是托管状态，解除托管
+            if (p.isTrustee()) {
+                p.setTrustee(false);
+                broadcastGameState(roomId, p.getDisplayName() + " 取消托管并请求再来一局。", room);
             }
             p.setRequestedNewGame(true);
             long active = room.getPlayers().values().stream().filter(pl -> !pl.isTrustee()).count();

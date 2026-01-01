@@ -134,72 +134,47 @@ Page({
   handlePlayAgain() {
     console.log('[RESULT] 点击再来一局');
     
-    if (this.data.isGameOver) {
-      // 游戏彻底结束，返回大厅创建新房间
-      wx.showModal({
-        title: '提示',
-        content: '本局游戏已结束，是否返回大厅开始新游戏？',
-        confirmText: '返回大厅',
-        cancelText: '留在这里',
-        success: (res) => {
-          if (res.confirm) {
-            // 清理所有游戏状态
-            app.globalData.gameResult = null;
-            app.globalData.gameState = null;
-            app.globalData.currentRoom = null;
-            wx.removeStorageSync('gameResult');
-            wx.removeStorageSync('gameState');
-            wx.removeStorageSync('currentRoom');
-            
-            wx.switchTab({
-              url: '/pages/lobby/lobby'
-            });
-          }
+    // 游戏结束，继续下一局（在当前房间准备）
+    const roomId = this.data.roomId;
+
+    // 验证 roomId
+    if (!roomId || typeof roomId !== 'string' || roomId.trim() === '') {
+      wx.showToast({
+        title: '房间ID无效',
+        icon: 'none'
+      });
+      return;
+    }
+
+    wx.showLoading({ title: '准备下一局...', mask: true });
+
+    // 清空结算数据，但保留房间信息
+    app.globalData.gameResult = null;
+    wx.removeStorageSync('gameResult');
+
+    // 设置标志位，告诉游戏页面需要自动发送requestNewGame
+    app.globalData.autoRequestNewGame = true;
+
+    // 延迟跳转，确保状态清理完成 (500ms delay for state cleanup)
+    const NAVIGATION_DELAY = 500;
+    setTimeout(() => {
+      // 使用 redirectTo 替换当前页面，避免堆栈过深
+      wx.redirectTo({
+        url: `/pages/game/game?roomId=${encodeURIComponent(roomId)}&requestNewGame=true`,
+        success: () => {
+          console.log('[RESULT] 成功跳转到游戏页面，roomId:', roomId);
+          wx.hideLoading();
+        },
+        fail: (err) => {
+          console.error('[RESULT] 跳转失败:', err);
+          wx.hideLoading();
+          wx.showToast({
+            title: '跳转失败，请重试',
+            icon: 'none'
+          });
         }
       });
-    } else {
-      // 游戏未结束，继续下一局
-      const roomId = this.data.roomId;
-      
-      // 验证 roomId
-      if (!roomId || typeof roomId !== 'string' || roomId.trim() === '') {
-        wx.showToast({
-          title: '房间ID无效',
-          icon: 'none'
-        });
-        return;
-      }
-      
-      wx.showLoading({ title: '准备下一局...', mask: true });
-      
-      // 清空结算数据，但保留房间信息
-      app.globalData.gameResult = null;
-      wx.removeStorageSync('gameResult');
-      
-      // 设置标志位，告诉游戏页面需要自动发送requestNewGame
-      app.globalData.autoRequestNewGame = true;
-      
-      // 延迟跳转，确保状态清理完成 (500ms delay for state cleanup)
-      const NAVIGATION_DELAY = 500;
-      setTimeout(() => {
-        // 使用 redirectTo 替换当前页面，避免堆栈过深
-        wx.redirectTo({
-          url: `/pages/game/game?roomId=${encodeURIComponent(roomId)}&requestNewGame=true`,
-          success: () => {
-            console.log('[RESULT] 成功跳转到游戏页面，roomId:', roomId);
-            wx.hideLoading();
-          },
-          fail: (err) => {
-            console.error('[RESULT] 跳转失败:', err);
-            wx.hideLoading();
-            wx.showToast({
-              title: '跳转失败，请重试',
-              icon: 'none'
-            });
-          }
-        });
-      }, NAVIGATION_DELAY);
-    }
+    }, NAVIGATION_DELAY);
   },
 
   /**
