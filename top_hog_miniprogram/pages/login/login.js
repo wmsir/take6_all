@@ -43,7 +43,7 @@ Page({
             .then((data) => {
               // 保存用户信息和 token（保存所有返回的字段）
               const userInfo = {
-                id: data.id,
+                ...data,
                 nickname: data.nickname || '谁是猪头王玩家',
                 avatarUrl: data.avatarUrl || '/images/default-avatar.png',
                 phone: data.phone || null,
