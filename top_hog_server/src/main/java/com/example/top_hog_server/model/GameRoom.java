@@ -37,6 +37,9 @@ public class GameRoom {
     @Enumerated(EnumType.STRING)
     private GameState gameState = GameState.WAITING; // 当前游戏状态
 
+    @Enumerated(EnumType.STRING)
+    private GameType gameType = GameType.TOP_HOG; // 游戏类型，默认为猪头王
+
     @Transient
     private Map<String, Player> players = new ConcurrentHashMap<>(); // sessionId -> Player 对象
 

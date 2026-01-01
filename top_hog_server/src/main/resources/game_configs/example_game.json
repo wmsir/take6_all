@@ -1,0 +1,32 @@
+{
+  "gameTypeCode": "example_game",
+  "displayName": "示例游戏",
+  "description": "这是一个示例游戏配置，展示如何添加新游戏",
+  "minPlayers": 2,
+  "maxPlayers": 6,
+  "enabled": false,
+  "iconUrl": "/images/games/example_game.png",
+  "displayOrder": 99,
+  "rulesDescription": "这是一个示例游戏的规则说明。\n\n游戏目标：\n- 完成示例任务\n- 获得最高分数\n\n游戏规则：\n1. 规则1说明\n2. 规则2说明\n3. 规则3说明\n\n特殊规则：\n- 特殊规则1\n- 特殊规则2",
+  "gameSpecificConfig": {
+    "roundDuration": 60,
+    "maxRounds": 5,
+    "pointsToWin": 100,
+    "features": {
+      "supportBot": false,
+      "supportTrustee": false,
+      "supportQuickMatch": true,
+      "supportPrivateRoom": true,
+      "supportSpectator": true
+    },
+    "gameElements": {
+      "elementType1": "value1",
+      "elementType2": "value2"
+    },
+    "customSettings": {
+      "setting1": true,
+      "setting2": 50,
+      "setting3": "custom_value"
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "gameTypeCode": "top_hog",
+  "displayName": "谁是猪头王",
+  "description": "经典牛头王游戏，避免收集牛头卡牌",
+  "minPlayers": 2,
+  "maxPlayers": 10,
+  "enabled": true,
+  "iconUrl": "/images/games/top_hog.png",
+  "displayOrder": 1,
+  "rulesDescription": "游戏目标：避免收集牛头卡牌，拥有最少牛头数的玩家获胜。\n\n游戏规则：\n1. 每位玩家获得10张手牌（1-104号）\n2. 所有玩家同时选择一张牌打出\n3. 按数字大小依次放置到4个牌列中\n4. 牌必须放在比它小的最大数字后面\n5. 当牌列满6张时，下一个玩家需要收走该列并获得相应牛头数\n6. 如果打出的牌比所有列的末尾牌都小，玩家必须选择一列收走\n7. 游戏进行10轮出牌，然后计算本轮得分\n8. 可进行多轮游戏，累计牛头数最少者获胜\n\n牛头数规则：\n- 普通牌：1个牛头\n- 5的倍数（非10）：2个牛头\n- 10的倍数（非11）：3个牛头\n- 11的倍数：5个牛头\n- 特殊牌55号：7个牛头",
+  "gameSpecificConfig": {
+    "deckSize": 104,
+    "handSize": 10,
+    "rowCount": 4,
+    "maxCardsPerRow": 5,
+    "defaultMaxRounds": 3,
+    "defaultTargetScore": 66,
+    "playerChoiceTimeoutMs": 30000,
+    "specialCards": {
+      "card55": {
+        "number": 55,
+        "bullheads": 7,
+        "description": "特殊牌，最多牛头数"
+      },
+      "multiples11": {
+        "multiples": [11],
+        "bullheads": 5,
+        "description": "11的倍数"
+      },
+      "multiples10": {
+        "multiples": [10],
+        "bullheads": 3,
+        "description": "10的倍数（非11的倍数）"
+      },
+      "multiples5": {
+        "multiples": [5],
+        "bullheads": 2,
+        "description": "5的倍数（非10的倍数）"
+      }
+    },
+    "gameFeatures": {
+      "supportBot": true,
+      "supportTrustee": true,
+      "supportQuickMatch": true,
+      "supportPrivateRoom": true,
+      "supportSpectator": false
+    },
+    "scoring": {
+      "lowScoreWins": true,
+      "maxBullheadsPerCard": 7,
+      "gameOverThreshold": 66
+    }
+  }
+}
