@@ -561,25 +561,10 @@ Page({
       ? revealedCards.map(c => c.cardNumber || c.number).sort((a, b) => a - b).join(', ')
       : '';
 
-    // 手牌保护：如果服务器返回的手牌为空，但本地还有手牌，保留本地手牌（防止出牌过程中闪烁）
-    const shouldUpdateHand = playerHand.length > 0 || this.data.playerHand.length === 0;
-    const finalPlayerHand = shouldUpdateHand ? playerHand : this.data.playerHand;
-    const finalHandCount = shouldUpdateHand ? playerHand.length : this.data.handCount;
-    
-    // 场牌保护：如果服务器返回的场牌为空，但本地还有场牌，保留本地场牌
-    const shouldUpdateRows = rows.length > 0 || this.data.rows.length === 0;
-    const finalRows = shouldUpdateRows ? rows : this.data.rows;
-    
-    console.log('[GAME] 数据更新策略:', {
-      serverHand: playerHand.length,
-      localHand: this.data.playerHand.length,
-      shouldUpdateHand: shouldUpdateHand,
-      finalHand: finalPlayerHand.length,
-      serverRows: rows.length,
-      localRows: this.data.rows.length,
-      shouldUpdateRows: shouldUpdateRows,
-      finalRows: finalRows.length
-    });
+    // 直接使用服务器返回的数据，移除之前的保护逻辑，解决打完最后一张牌后仍显示的问题
+    const finalPlayerHand = playerHand;
+    const finalHandCount = playerHand.length;
+    const finalRows = rows;
     
     this.setData({
       roomInfo: roomState,
