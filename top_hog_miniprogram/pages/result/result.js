@@ -158,9 +158,9 @@ Page({
     // 延迟跳转，确保状态清理完成 (500ms delay for state cleanup)
     const NAVIGATION_DELAY = 500;
     setTimeout(() => {
-      // 使用 redirectTo 替换当前页面，避免堆栈过深
-      wx.redirectTo({
-        url: `/pages/game/game?roomId=${encodeURIComponent(roomId)}&requestNewGame=true`,
+      // 使用 switchTab 跳转到 tabbar 页面
+      wx.switchTab({
+        url: '/pages/game/game',
         success: () => {
           console.log('[RESULT] 成功跳转到游戏页面，roomId:', roomId);
           wx.hideLoading();
