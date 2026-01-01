@@ -101,6 +101,18 @@ function addBots(roomId, botCount) {
   });
 }
 
+/**
+ * 快速匹配并加入房间
+ * @returns {Promise}
+ */
+function quickMatch() {
+  return request({
+    url: '/api/room/quick-match',
+    method: 'POST',
+    data: {}
+  });
+}
+
 module.exports = {
   createRoom,
   joinRoom,
@@ -108,5 +120,6 @@ module.exports = {
   leaveRoom,
   readyGame,
   startGame,
-  addBots
+  addBots,
+  quickMatch
 };

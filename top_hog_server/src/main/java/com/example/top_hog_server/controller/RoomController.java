@@ -114,6 +114,18 @@ public class RoomController {
     }
 
     /**
+     * 快速匹配并加入有空余位置的房间。
+     * 自动查找第一个有空位的公开房间并加入。
+     *
+     * @return 包含加入的 GameRoom 对象的 ApiResponse
+     */
+    @PostMapping("/quick-match")
+    public ApiResponse<GameRoom> quickMatch() {
+        GameRoom room = gameRoomService.quickMatch();
+        return ApiResponse.success(room);
+    }
+
+    /**
      * 获取所有当前可用的游戏房间列表。
      * 支持分页和仅显示可用房间的过滤。
      *
