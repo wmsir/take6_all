@@ -165,9 +165,26 @@ Page({
     }
 
     const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
-    // 使用用户ID作为userIdentifier
-    const userIdentifier = userInfo.id || userInfo.username || userInfo.nickname;
-    const wsUrl = `${app.globalData.wsUrl}?roomId=${roomId}&userIdentifier=${encodeURIComponent(userIdentifier)}`;
+    
+    // 验证用户信息和用户ID
+    if (!userInfo || !userInfo.id) {
+      console.error('connectWebSocket: 用户信息或用户ID缺失', userInfo);
+      wx.showToast({
+        title: '用户信息缺失，请重新登录',
+        icon: 'none',
+        duration: 2000
+      });
+      setTimeout(() => {
+        wx.reLaunch({
+          url: '/pages/login/login'
+        });
+      }, 2000);
+      return;
+    }
+    
+    // 使用用户ID作为userIdentifier（必须是数字）
+    const userIdentifier = userInfo.id;
+    const wsUrl = `${app.globalData.wsUrl}?roomId=${roomId}&userIdentifier=${userIdentifier}`;
 
     wx.connectSocket({ url: wsUrl });
 
@@ -201,7 +218,7 @@ Page({
       } else if (msg.type === 'chat') {
         this.handleNewChatMessage(msg);
       } else if (msg.type === 'error') {
-        wx.showToast({ title: msg.data || '发生错误', icon: 'none' });
+        wx.showToast({ title: msg.message || msg.data || '发生错误', icon: 'none' });
       }
     });
 
@@ -674,7 +691,7 @@ Page({
   handleReady() {
     const { isMeReady, isHost } = this.data;
     const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
-    const userIdentifier = userInfo.id || userInfo.username || userInfo.nickname;
+    const userIdentifier = userInfo.id;
     
     // 发送切换准备状态的消息
     this.sendSocketMsg({
@@ -752,7 +769,7 @@ Page({
     }
 
     const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
-    const userIdentifier = userInfo.id || userInfo.username || userInfo.nickname;
+    const userIdentifier = userInfo.id;
     this.sendSocketMsg({
       type: 'startGame',
       roomId: this.data.roomId,
@@ -770,7 +787,7 @@ Page({
       success: (res) => {
         if (res.confirm) {
           const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
-          const userIdentifier = userInfo.id || userInfo.username || userInfo.nickname;
+          const userIdentifier = userInfo.id;
           this.sendSocketMsg({
             type: 'leaveRoom',
             roomId: this.data.roomId,
@@ -839,7 +856,7 @@ Page({
     if (!content) return;
 
     const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
-    const userIdentifier = userInfo.id || userInfo.username || userInfo.nickname;
+    const userIdentifier = userInfo.id;
 
     // Send via WebSocket
     this.sendSocketMsg({

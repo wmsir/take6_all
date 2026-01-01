@@ -198,23 +198,24 @@ Page({
     }
     
     const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
-    if (!userInfo) {
-      console.error('connectWebSocket: 用户信息为空');
+    if (!userInfo || !userInfo.id) {
+      console.error('connectWebSocket: 用户信息或用户ID缺失', userInfo);
       wx.showToast({
-        title: '请先登录',
-        icon: 'none'
+        title: '用户信息缺失，请重新登录',
+        icon: 'none',
+        duration: 2000
       });
+      setTimeout(() => {
+        wx.reLaunch({
+          url: '/pages/login/login'
+        });
+      }, 2000);
       return;
     }
     
-    // 使用用户ID作为userIdentifier
-    const userIdentifier = userInfo.id || userInfo.username || userInfo.nickname;
-    if (!userIdentifier) {
-      console.error('connectWebSocket: userIdentifier为空');
-      return;
-    }
-    
-    const wsUrl = `${app.globalData.wsUrl}?roomId=${roomId}&userIdentifier=${encodeURIComponent(userIdentifier)}`;
+    // 使用用户ID作为userIdentifier（必须是数字）
+    const userIdentifier = userInfo.id;
+    const wsUrl = `${app.globalData.wsUrl}?roomId=${roomId}&userIdentifier=${userIdentifier}`;
     console.log('连接WebSocket:', wsUrl);
     
     // 先尝试获取一次游戏状态（不等待WebSocket）
@@ -732,7 +733,7 @@ Page({
     
     if (this.data.wsConnected || socketOpen) {
       const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
-      const userIdentifier = userInfo && (userInfo.id || userInfo.username || userInfo.nickname);
+      const userIdentifier = userInfo && userInfo.id;
       
       if (!userIdentifier) {
         wx.showToast({
@@ -806,7 +807,7 @@ Page({
 
     this.setData({ isProcessing: true, roomId });
     const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
-    const userIdentifier = userInfo && (userInfo.id || userInfo.username || userInfo.nickname);
+    const userIdentifier = userInfo && userInfo.id;
     // 兼容后端两种解析方式：
     // 1) 读取顶层字段 roomId/cardNumber
     // 2) 读取 data 负载（部分服务端会要求 msg.data 存在）
@@ -842,19 +843,19 @@ Page({
 
   handleReady() {
     const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
-    const userIdentifier = userInfo && (userInfo.id || userInfo.username || userInfo.nickname);
+    const userIdentifier = userInfo && userInfo.id;
     this.sendSocketMsg({ type: 'playerReady', roomId: this.data.roomId, userIdentifier });
   },
 
   handleStartGame() {
     const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
-    const userIdentifier = userInfo && (userInfo.id || userInfo.username || userInfo.nickname);
+    const userIdentifier = userInfo && userInfo.id;
     this.sendSocketMsg({ type: 'startGame', roomId: this.data.roomId, userIdentifier });
   },
 
   handleLeaveRoom() {
     const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
-    const userIdentifier = userInfo && (userInfo.id || userInfo.username || userInfo.nickname);
+    const userIdentifier = userInfo && userInfo.id;
     wx.showModal({
       title: '提示',
       content: '确定要离开游戏吗？',
@@ -875,7 +876,7 @@ Page({
   sendChatMessage() {
     const { chatInput } = this.data;
     const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
-    const userIdentifier = userInfo && (userInfo.id || userInfo.username || userInfo.nickname);
+    const userIdentifier = userInfo && userInfo.id;
     if (!chatInput.trim()) return;
     this.sendSocketMsg({
       type: 'chat',
