@@ -231,6 +231,11 @@ Page({
         app.globalData.currentRoom = data;
         wx.setStorageSync('currentRoom', data);
 
+        // 设置清除聊天记录的标志
+        // 当进入新房间时，需要清除上一个房间的聊天记录
+        app.globalData.clearRoomChat = true;
+        app.globalData.clearGameChat = true;
+
         wx.hideLoading();
         wx.showToast({
           title: '加入成功',

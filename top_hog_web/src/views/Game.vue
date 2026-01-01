@@ -166,7 +166,8 @@ import api from '../services/api';
 
 const route = useRoute();
 const router = useRouter();
-const roomId = route.params.roomId;
+// Make roomId reactive by using a computed or ref that updates
+const roomId = ref(route.params.roomId);
 const userInfo = reactive(JSON.parse(localStorage.getItem('user_info') || '{}'));
 
 // Refs
@@ -335,7 +336,7 @@ const connect = () => {
         addLog("WebSocket Open");
         isConnected.value = true;
         // Join Room automatically
-        send({ type: 'joinRoom', roomId });
+        send({ type: 'joinRoom', roomId: roomId.value });
     };
 
     ws.value.onmessage = (event) => {
@@ -434,7 +435,7 @@ const updateGameState = (state) => {
     // If we transition OUT of GAME_OVER, clear the sessionStorage acknowledgement
     if (gameState.value === 'GAME_OVER' && state.gameState !== 'GAME_OVER') {
         victoryOverlayManuallyClosed.value = false;
-        sessionStorage.removeItem(`victory_ack_${roomId}`);
+        sessionStorage.removeItem(`victory_ack_${roomId.value}`);
     }
 
     gameState.value = state.gameState;
@@ -468,7 +469,7 @@ const updateGameState = (state) => {
          victoryMessage.value = msg.includes("获胜") ? msg : `游戏结束! ${winnerName} 获胜!`;
 
          // Check if already acknowledged in this session
-         const isAck = sessionStorage.getItem(`victory_ack_${roomId}`);
+         const isAck = sessionStorage.getItem(`victory_ack_${roomId.value}`);
 
          if (!victoryOverlayManuallyClosed.value && !isAck) {
              showVictoryOverlay.value = true;
@@ -481,20 +482,20 @@ const updateGameState = (state) => {
 };
 
 const toggleReady = () => {
-    send({ type: 'playerReady', roomId });
+    send({ type: 'playerReady', roomId: roomId.value });
 };
 
 const startGame = () => {
-    send({ type: 'startGame', roomId });
+    send({ type: 'startGame', roomId: roomId.value });
 };
 
 const toggleAutoPlay = () => {
-    send({ type: 'toggleAutoPlay', roomId });
+    send({ type: 'toggleAutoPlay', roomId: roomId.value });
 };
 
 const addBot = async () => {
     try {
-        const response = await api.post('/room/add-bots', { roomId, botCount: 1 });
+        const response = await api.post('/room/add-bots', { roomId: roomId.value, botCount: 1 });
         if (response.data.code !== 200) {
             alert(response.data.message);
         }
@@ -512,16 +513,16 @@ const playCard = () => {
     if (!selectedCard.value) return;
     isWaitingForTurnProcessing.value = true;
     joiningFeedback.value = "正在出牌...";
-    send({ type: 'playCard', roomId, data: { cardNumber: selectedCard.value.number } });
+    send({ type: 'playCard', roomId: roomId.value, data: { cardNumber: selectedCard.value.number } });
     selectedCard.value = null; // Clear selection
 };
 
 const getTip = () => {
-    send({ type: 'requestPlayTip', roomId });
+    send({ type: 'requestPlayTip', roomId: roomId.value });
 };
 
 const chooseRow = (rowIndex) => {
-    send({ type: 'selectRow', roomId, rowIndex: rowIndex }); // Backend supports 'selectRow' with direct 'rowIndex' or 'playerChoosesRow'
+    send({ type: 'selectRow', roomId: roomId.value, rowIndex: rowIndex }); // Backend supports 'selectRow' with direct 'rowIndex' or 'playerChoosesRow'
     showChoiceArea.value = false;
 };
 
@@ -538,26 +539,26 @@ const handleQuickChat = () => {
 
 const sendChat = () => {
     if (!chatInput.value.trim()) return;
-    send({ type: 'chat', roomId, data: { text: chatInput.value.trim() } });
+    send({ type: 'chat', roomId: roomId.value, data: { text: chatInput.value.trim() } });
     chatInput.value = '';
     quickChat.value = '';
 };
 
 const leaveRoom = () => {
     if (confirm("确定要离开房间吗？")) {
-        send({ type: 'leaveRoom', roomId });
+        send({ type: 'leaveRoom', roomId: roomId.value });
         // Client side navigation happens on 'leftRoomSuccess'
     }
 };
 
 const playAgain = () => {
-    send({ type: 'requestNewGame', roomId });
+    send({ type: 'requestNewGame', roomId: roomId.value });
 };
 
 const closeVictoryOverlay = () => {
     showVictoryOverlay.value = false;
     victoryOverlayManuallyClosed.value = true;
-    sessionStorage.setItem(`victory_ack_${roomId}`, 'true');
+    sessionStorage.setItem(`victory_ack_${roomId.value}`, 'true');
 };
 
 const getStatusColor = (player) => {
@@ -581,6 +582,40 @@ onMounted(() => {
 onUnmounted(() => {
     if (ws.value) ws.value.close();
 });
+
+// Watch for route parameter changes to handle room switching
+watch(
+  () => route.params.roomId,
+  (newRoomId, oldRoomId) => {
+    if (newRoomId && newRoomId !== oldRoomId) {
+      addLog(`Switching room from ${oldRoomId} to ${newRoomId}`);
+
+      // Update roomId ref
+      roomId.value = newRoomId;
+
+      // Close existing connection
+      if (ws.value) {
+        ws.value.close();
+        ws.value = null;
+        isConnected.value = false;
+      }
+
+      // Reset State
+      chatMessages.value = [];
+      logs.value = [];
+      players.value = {};
+      gameRows.value = [];
+      myHand.value = [];
+      selectedCard.value = null;
+      gameState.value = 'WAITING';
+
+      // Reconnect
+      nextTick(() => {
+        connect();
+      });
+    }
+  }
+);
 </script>
 
 <style scoped>

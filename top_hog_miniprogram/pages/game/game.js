@@ -106,6 +106,13 @@ Page({
   },
 
   onShow() {
+    // Check if we need to clear chat history (e.g. joined a new game)
+    if (app.globalData.clearGameChat) {
+      console.log('Clearing game chat history');
+      this.setData({ chatMessages: [] });
+      app.globalData.clearGameChat = false;
+    }
+
     // 每次显示页面时，检查是否需要重新连接 WebSocket
     let roomId = this.data.roomId;
     console.log('[GAME] onShow state:', {
@@ -1149,4 +1156,4 @@ Page({
       icon: 'none'
     });
   }
-}); 
+});
