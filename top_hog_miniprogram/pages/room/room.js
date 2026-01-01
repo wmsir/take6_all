@@ -218,7 +218,7 @@ Page({
       } else if (msg.type === 'chat') {
         this.handleNewChatMessage(msg);
       } else if (msg.type === 'error') {
-        wx.showToast({ title: msg.data || '发生错误', icon: 'none' });
+        wx.showToast({ title: msg.message || msg.data || '发生错误', icon: 'none' });
       }
     });
 
