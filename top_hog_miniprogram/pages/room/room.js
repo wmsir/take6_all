@@ -59,6 +59,13 @@ Page({
   },
 
   onShow() {
+    // Check if we need to clear chat history (e.g. joined a new room)
+    if (app.globalData.clearRoomChat) {
+      console.log('Clearing room chat history');
+      this.setData({ chatMessages: [] });
+      app.globalData.clearRoomChat = false;
+    }
+
     this.checkRoomState();
   },
 
@@ -491,6 +498,16 @@ Page({
         socketOpen = false;
         socketMsgQueue = [];
         this.setData({ wsConnected: false });
+
+        // 设置清除游戏聊天记录的标志，确保新的对局聊天是空的
+        // 如果是同一局游戏继续玩，可能不需要清除？
+        // 但根据需求“进入新的房间”，通常是新的开始。
+        // 如果是在同一个房间开始新一局，可能也需要清除？
+        // 用户需求是"进入新的房间以后"，这里是从等待室进入游戏室，通常是一次性的。
+        // 为了安全起见，我们在进入游戏页面时清除聊天记录，除非逻辑上需要保留。
+        // 通常游戏内的聊天和等待室聊天是分开的，或者延续的。
+        // 这里设置为true，让Game页面决定。
+        app.globalData.clearGameChat = true;
 
         setTimeout(() => {
           wx.switchTab({
