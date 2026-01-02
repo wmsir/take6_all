@@ -172,6 +172,57 @@ public class GameLogicService {
         }
     }
 
+    /**
+     * 将游戏重置为 WAITING 状态，并将所有点击了“再来一局”的玩家设置为 Ready 状态。
+     * 这满足了需求：“需要2个都可以进入当前房间的时候，都是准备状态”。
+     */
+    public void resetGameToWaiting(String roomId, String instigatingPlayerSessionId) {
+        GameRoom room = gameRoomService.getRoom(roomId);
+        if (room == null) {
+            sendErrorToUserSession(gameWebSocketHandler.getSessionById(instigatingPlayerSessionId), roomId, "房间未找到。");
+            return;
+        }
+
+        Lock roomLock = getRoomLock(roomId);
+        roomLock.lock();
+        try {
+            if (room.getGameState() != GameState.GAME_OVER) {
+                sendErrorToRoom(roomId, "只有在游戏结束时才能重置到等待状态。");
+                return;
+            }
+
+            logger.info("将房间 {} 重置为等待状态（再来一局）。", roomId);
+
+            // 将所有之前请求了新游戏的活跃玩家标记为 Ready
+            // 注意：resetForNewGame() 会将 isReady 重置为 false，所以我们需要重新设置
+            // 为了解决测试失败的问题，我们需要先保存哪些玩家请求了新游戏，然后再重置
+            Set<String> playersWhoRequested = new HashSet<>();
+            for (Player p : room.getPlayers().values()) {
+                if (p.isRequestedNewGame() || p.isRobot()) {
+                    playersWhoRequested.add(p.getSessionId());
+                }
+            }
+
+            // 重置房间数据（清空分数、手牌、桌面等）
+            room.resetForNewGame();
+
+            // 设置状态为 WAITING
+            room.setGameState(GameState.WAITING);
+
+            for (Player p : room.getPlayers().values()) {
+                if (playersWhoRequested.contains(p.getSessionId())) {
+                    p.setReady(true);
+                }
+                // requestedNewGame 已经在 resetForNewGame() 中被重置为 false 了
+            }
+
+            broadcastGameState(roomId, "全员已同意再来一局。返回房间，准备开始。", room);
+
+        } finally {
+            roomLock.unlock();
+        }
+    }
+
     // 开始新游戏（或一局游戏结束后的“再来一局”）
     public void startGame(String roomId, String instigatingPlayerSessionId) {
         GameRoom room = gameRoomService.getRoom(roomId);
@@ -1296,7 +1347,9 @@ public class GameLogicService {
             long requested = room.getPlayers().values().stream().filter(pl -> !pl.isTrustee() && pl.isRequestedNewGame()).count();
             // 改为>=，以防万一有额外请求
             if (active > 0 && requested >= active) {
-                startGame(roomId, session.getId());
+                // startGame(roomId, session.getId());
+                // 根据需求修改：当所有人都点击再来一局时，不直接开始游戏，而是重置到WAITING状态，并标记为准备就绪
+                resetGameToWaiting(roomId, session.getId());
             } else {
                 broadcastGameState(roomId, p.getDisplayName() + " 请求再来一局 (" + requested + "/" + active + ")。", room);
             }
