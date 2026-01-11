@@ -210,7 +210,7 @@ public class AuthController {
         // 4. 创建新用户账号
         User user = new User(signUpRequest.getUsername(),
                 signUpRequest.getEmail(),
-                signUpRequest.getPassword()); // 密码先保存明文
+                encoder.encode(signUpRequest.getPassword())); // 密码加密保存
         user.setNickname(signUpRequest.getUsername()); // 默认昵称为用户名
         user.setInviteCode(generateInviteCode());      // 生成邀请码
         user.setVipStatus(0);                          // 设置默认VIP状态

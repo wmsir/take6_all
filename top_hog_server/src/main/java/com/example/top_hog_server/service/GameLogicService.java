@@ -10,6 +10,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import com.example.top_hog_server.service.game.GameEngineFactory;
+import com.example.top_hog_server.service.game.GameEngine;
+import com.example.top_hog_server.service.game.TopHogGameEngine; // 临时引用以便强转调用特定方法，后续应完全抽象
 import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
@@ -37,37 +40,13 @@ public class GameLogicService {
     // 存储玩家选择的定时器
     private final Map<String, ScheduledFuture<?>> choiceTimers = new ConcurrentHashMap<>();
     private final BotProfileService botProfileService;
+    private final GameEngineFactory gameEngineFactory; // 注入工厂
 
     // 从配置文件读取玩家选择超时时间，默认30秒
     @Value("${game.playerChoice.timeoutMs:30000}")
     private long playerChoiceTimeoutMs;
 
-    // 初始的完整牌堆
-    private static final List<Card> INITIAL_FULL_DECK = new ArrayList<>();
-    // 用于保证每个房间操作的线程安全
-    private final Map<String, Lock> roomLocks = new ConcurrentHashMap<>();
-
-    // 静态代码块，在类加载时初始化完整牌堆 (1到104张牌)
-    static {
-        for (int i = 1; i <= 104; i++) {
-            // 默认猪头数为1
-            int bullheads = 1;
-            if (i == 55) {
-                // 特殊牌：55号牌7个猪头
-                bullheads = 7;
-            } else if (i % 11 == 0) {
-                // 11的倍数5个猪头
-                bullheads = 5;
-            } else if (i % 10 == 0) {
-                // 10的倍数3个猪头
-                bullheads = 3;
-            } else if (i % 5 == 0 && i % 10 != 0) {
-                // 5的倍数（且非10的倍数）2个猪头
-                bullheads = 2;
-            }
-            INITIAL_FULL_DECK.add(new Card(i, bullheads));
-        }
-    }
+    // 移除静态代码块和 INITIAL_FULL_DECK，移至 TopHogGameEngine
 
     // 自动注入依赖的服务
     // @Lazy确保在循环依赖时能正确加载
@@ -77,13 +56,15 @@ public class GameLogicService {
                             GameHistoryRepository gameHistoryRepository,
                             @Lazy GameWebSocketHandler gameWebSocketHandler,
                             TaskScheduler taskScheduler,
-                            BotProfileService botProfileService) {
+                            BotProfileService botProfileService,
+                            GameEngineFactory gameEngineFactory) {
         this.gameRoomService = gameRoomService;
         this.userRepository = userRepository;
         this.gameHistoryRepository = gameHistoryRepository;
         this.gameWebSocketHandler = gameWebSocketHandler;
         this.taskScheduler = taskScheduler;
         this.botProfileService = botProfileService;
+        this.gameEngineFactory = gameEngineFactory;
     }
 
     // 获取指定房间的锁，如果不存在则创建一个新的
@@ -275,57 +256,17 @@ public class GameLogicService {
 
             logger.info("在房间 {} 中开始一个全新的游戏。", roomId);
             // 重置房间状态以开始新游戏（分数等）
-            room.resetForNewGame();
+            // 获取对应的游戏引擎
+            GameEngine engine = gameEngineFactory.getEngine(room.getGameType());
+            
+            // 调用引擎初始化游戏（发牌、洗牌、初始牌列等）
+            engine.initializeGame(room);
+            
+            // 初始化手牌（引擎可能在initializeGame里做了，也可能分开，这里假设TopHogEngine的initializeGame只负责公共区域）
+            // 修正：TopHogGameEngine.startNewRound 负责发手牌。
+            engine.startNewRound(room);
 
-            // 创建新牌堆
-            List<Card> newDeck = new ArrayList<>(INITIAL_FULL_DECK);
-            // 洗牌
-            Collections.shuffle(newDeck);
-            room.setDeck(newDeck);
-            logger.info("房间 {} 新游戏：牌堆已创建并洗牌，共 {} 张牌。", roomId, room.getDeck().size());
-
-            // 清空桌面上的所有牌列
-            room.clearAllRows();
-            // 给每个牌列发一张起始牌
-            for (GameRow gameRow : room.getRows()) {
-                if (room.getDeck().isEmpty()) {
-                    logger.error("严重错误：在房间 {} 新游戏初始化牌列时牌堆为空！", roomId);
-                    sendErrorToRoom(roomId, "内部错误：牌堆在游戏初始化时为空！");
-                    room.setGameState(GameState.GAME_OVER);
-                    broadcastGameState(roomId,"游戏因错误未能开始。",room);
-                    return;
-                }
-                // 从牌堆顶取一张牌
-                gameRow.addCard(room.getDeck().remove(0));
-            }
-            logger.info("房间 {} 新游戏：初始4张牌已放置到牌列。", roomId);
-
-            // 存储所有玩家手牌，供AI提示使用
-            Map<String, List<Card>> allHandsForAI = new HashMap<>();
-            //给每个玩家发10张手牌
-            for (Player player : room.getPlayers().values()) {
-                // 检查牌堆是否够发
-                if (room.getDeck().size() < 10) {
-                    logger.error("严重错误：房间 {} 新游戏发初始手牌时牌堆不足！", roomId);
-                    sendErrorToRoom(roomId, "内部错误：牌堆不足以发初始手牌！");
-                    room.setGameState(GameState.GAME_OVER);
-                    broadcastGameState(roomId,"游戏因错误未能开始。",room);
-                    return;
-                }
-                // 清空玩家之前的手牌
-                player.getHand().clear();
-                for (int i = 0; i < 10; i++) {
-                    player.addCardToHand(room.getDeck().remove(0));
-                }
-                // 手牌排序
-                player.getHand().sort(Comparator.comparingInt(Card::getNumber));
-                // 记录手牌副本给AI
-                allHandsForAI.put(player.getSessionId(), new ArrayList<>(player.getHand()));
-            }
-            // 更新房间内所有玩家手牌信息（AI用）
-            room.setAllPlayerHandsForAI(allHandsForAI);
-
-            logger.info("房间 {} 新游戏：已向 {} 位玩家发出初始10张手牌。", roomId, room.getPlayers().size());
+            logger.info("房间 {} 新游戏初始化完成。", roomId);
 
             // 设置为第一轮
             room.setCurrentTurnNumber(1);
@@ -349,73 +290,24 @@ public class GameLogicService {
         for (Player player : room.getPlayers().values()) {
             player.resetForNewRound();
         }
-
-        // 计算活跃玩家数量，用于判断牌堆是否足够
-        long activePlayersCount = room.getPlayers().values().stream().filter(p -> !p.isTrustee() || room.getPlayers().size() == 1).count();
-        // 如果没有活跃玩家但房间有人，则按总人数算（全托管局）
-        if (activePlayersCount == 0 && !room.getPlayers().isEmpty()) {
-            activePlayersCount = room.getPlayers().size();
+        
+        GameEngine engine = gameEngineFactory.getEngine(room.getGameType());
+        engine.startNewRound(room);
+        
+        // 检查是否 startNewRound 内部因为牌不够而设置了 GAME_OVER
+        if (room.getGameState() == GameState.GAME_OVER) {
+             Player winner = determineWinner(room);
+             String gameOverMsg = "无法开始新一轮（可能牌不足），游戏结束。";
+             if (winner != null) {
+                 gameOverMsg += " 赢家: " + winner.getDisplayName();
+                 room.setWinnerDisplayName(winner.getDisplayName());
+             }
+             broadcastGameState(room.getRoomId(), gameOverMsg, room);
+             saveGameHistory(room);
+             return;
         }
 
-        // 检查牌堆剩余牌数是否足够开始新一轮
-        if (room.getDeck().size() < (activePlayersCount * 10)) {
-            logger.info("牌堆剩余牌数 ({}) 不足以在房间 {} 为 {} 位玩家开始新一轮。游戏结束。",
-                    room.getDeck().size(), room.getRoomId(), activePlayersCount);
-            // 设置游戏结束
-            room.setGameState(GameState.GAME_OVER);
-            // 决定最终赢家
-            Player winner = determineWinner(room);
-            String gameOverMsg = "牌堆的牌不足以开始新一轮！游戏结束。";
-            if (winner != null && winner.getDisplayName() != null && !winner.getDisplayName().isEmpty()) {
-                gameOverMsg += "最终赢家是: " + winner.getDisplayName() + " (" + winner.getScore() + "猪头)";
-                room.setWinnerDisplayName(winner.getDisplayName());
-            } else {
-                // 没有明确赢家
-                room.setWinnerDisplayName(null);
-                logger.info("startNewRound (牌堆不足): 未找到明确赢家或赢家名称为空。");
-            }
-            // 广播游戏结束状态
-            broadcastGameState(room.getRoomId(), gameOverMsg, room);
-            // 保存历史记录
-            saveGameHistory(room);
-            return;
-        }
-
-        Map<String, List<Card>> allHandsForAI = room.getAllPlayerHandsForAI() != null ? room.getAllPlayerHandsForAI() : new HashMap<>();
-        // 为每个玩家发新一轮的10张手牌
-        for (Player player : room.getPlayers().values()) {
-            player.getHand().clear();
-            for (int i = 0; i < 10; i++) {
-                if (!room.getDeck().isEmpty()) {
-                    player.addCardToHand(room.getDeck().remove(0));
-                } else { // 理论上前面已经检查过牌堆，这里是个保险
-                    logger.error("严重错误：在房间 {} 新一轮发牌时牌堆意外耗尽！", room.getRoomId());
-                    room.setGameState(GameState.GAME_OVER);
-                    Player winnerOnDeckEmpty = determineWinner(room);
-                    String errorGameOverMsg = "错误：发牌时牌堆意外耗尽！游戏结束。";
-                    if (winnerOnDeckEmpty != null && winnerOnDeckEmpty.getDisplayName() != null && !winnerOnDeckEmpty.getDisplayName().isEmpty()) {
-                        errorGameOverMsg += "最终赢家是: " + winnerOnDeckEmpty.getDisplayName() + " (" + winnerOnDeckEmpty.getScore() + "猪头)";
-                        room.setWinnerDisplayName(winnerOnDeckEmpty.getDisplayName());
-                    } else {
-                        room.setWinnerDisplayName(null);
-                    }
-                    broadcastGameState(room.getRoomId(), errorGameOverMsg, room);
-                    // 保存历史记录
-                    saveGameHistory(room);
-                    return;
-                }
-            }
-            // 非托管玩家手牌排序
-            if (!player.isTrustee()) {
-                player.getHand().sort(Comparator.comparingInt(Card::getNumber));
-            }
-            // 更新AI用手牌信息
-            allHandsForAI.put(player.getSessionId(), new ArrayList<>(player.getHand()));
-        }
-        room.setAllPlayerHandsForAI(allHandsForAI);
-
-        logger.info("房间 {} 新一轮：已向 {} 位玩家发出10张手牌。牌堆剩余 {} 张。",
-                room.getRoomId(), room.getPlayers().size(), room.getDeck().size());
+        logger.info("房间 {} 新一轮准备就绪。", room.getRoomId());
 
         // 清空上一轮的出牌记录
         room.getPlayedCardsThisTurn().clear();
@@ -798,11 +690,18 @@ public class GameLogicService {
                     trusteePlayer.getDisplayName(), trusteePlayer.getSessionId(), room.getRoomId());
             return;
         }
-        // 托管AI出牌策略：出手中最小的牌
-        //理论上不会是null，因为前面判断了手牌不为空
-        Card cardToPlay = trusteePlayer.getHand().stream()
+        // 托管AI出牌策略：调用 Engine
+        GameEngine engine = gameEngineFactory.getEngine(room.getGameType());
+        Card cardToPlay = null;
+        if (engine instanceof TopHogGameEngine) {
+            // 目前只重构了 TopHog，强转调用
+            cardToPlay = ((TopHogGameEngine) engine).determineBotPlayCard(trusteePlayer, room);
+        } else {
+             // 默认策略
+             cardToPlay = trusteePlayer.getHand().stream()
                 .min(Comparator.comparingInt(Card::getNumber))
                 .orElse(null);
+        }
 
         if (cardToPlay != null) {
             room.getPlayedCardsThisTurn().put(trusteePlayer.getSessionId(), cardToPlay);
@@ -900,37 +799,15 @@ public class GameLogicService {
             logger.info("房间 {} - 处理玩家 {} 的牌 {}", room.getRoomId(), playerDisplayNameForLog, playedCard.getNumber());
 
             // 寻找这张牌应该放置到哪个牌列
-            // 目标牌列的索引
+            // 委托给 Engine
+            GameEngine engine = gameEngineFactory.getEngine(room.getGameType());
             int targetRowIndex = -1;
-            // 牌是否可以正常放置（即大于某行的最后一张牌）
-            boolean cardCanBePlacedNormally = false;
-            // 记录最小的差值，用于选择最接近的牌列
-            int bestDifference = Integer.MAX_VALUE;
-
-            for (int i = 0; i < room.getRows().size(); i++) {
-                GameRow currentRow = room.getRows().get(i);
-                Card lastCardInRow = currentRow.getLastCard();
-                // 如果当前牌列是空的，或者打出的牌比这一行最后一张牌大
-                if (lastCardInRow != null && playedCard.getNumber() > lastCardInRow.getNumber()) {
-                    // 标记可以正常放置
-                    cardCanBePlacedNormally = true;
-                    int diff = playedCard.getNumber() - lastCardInRow.getNumber();
-                    // 如果差值更小，更新目标行和最小差值
-                    if (diff < bestDifference) {
-                        bestDifference = diff;
-                        targetRowIndex = i;
-                    }
-                } else if (lastCardInRow == null) { // 如果牌列是空的
-                    // 也可以正常放置
-                    cardCanBePlacedNormally = true;
-                    // 100000是一个足够大的数
-                    if (targetRowIndex == -1 || bestDifference > 100000) {
-                        // 确保选择第一个空牌列
-                        bestDifference = 100000 + i;
-                        targetRowIndex = i;
-                    }
-                }
+            
+            if (engine instanceof TopHogGameEngine) {
+                targetRowIndex = ((TopHogGameEngine) engine).findTargetRowIndex(room, playedCard);
             }
+            
+            boolean cardCanBePlacedNormally = (targetRowIndex != -1);
 
             // 如果不能正常放置（即打出的牌比所有牌列的最后一张牌都小）
             if (!cardCanBePlacedNormally) {
@@ -1134,15 +1011,11 @@ public class GameLogicService {
                 return;
             }
 
-            // 服务器自动选择策略：选择当前猪头数最少的那一行
+            // 服务器自动选择策略：委托给 Engine
+            GameEngine engine = gameEngineFactory.getEngine(room.getGameType());
             int autoChosenRowIndex = 0;
-            int minBullheads = Integer.MAX_VALUE;
-            for (int i = 0; i < room.getRows().size(); i++) {
-                int currentBullheads = room.getRows().get(i).getBullheadSum();
-                if (currentBullheads < minBullheads) {
-                    minBullheads = currentBullheads;
-                    autoChosenRowIndex = i;
-                }
+            if (engine instanceof TopHogGameEngine) {
+                autoChosenRowIndex = ((TopHogGameEngine) engine).findRowWithMinBullheads(room);
             }
             logger.info("服务器为玩家 {} (超时) 在房间 {} 自动选择了牌列 {} (猪头数: {})。",
                     currentPlayer.getDisplayName(), roomId, autoChosenRowIndex + 1, minBullheads);
@@ -1181,19 +1054,15 @@ public class GameLogicService {
     }
 
 
-    // 处理玩家拿走指定牌列，并将自己的牌作为该列新牌，返回收取的猪头数
+    // 处理玩家拿走指定牌列，委托给 Engine
     private int handlePlayerTakesRow(GameRoom room, Player player, int rowIndex, Card newCardForThisRow, String reason) {
-        if (rowIndex < 0 || rowIndex >= room.getRows().size()) {
-            logger.error("handlePlayerTakesRow: 无效的牌列索引 {} 对于房间 {}", rowIndex, room.getRoomId());
-            return 0;
+        GameEngine engine = gameEngineFactory.getEngine(room.getGameType());
+        int collectedBullheads = 0;
+        if (engine instanceof TopHogGameEngine) {
+             collectedBullheads = ((TopHogGameEngine) engine).executeTakeRow(room, player, rowIndex, newCardForThisRow);
+        } else {
+            logger.error("不支持的游戏类型用于 takeRow: " + room.getGameType());
         }
-        GameRow rowToTake = room.getRows().get(rowIndex);
-        // 使用 GameRow 自带的 takeRowAndReplace 方法来处理拿牌和替换的逻辑
-        LinkedList<Card> takenCards = rowToTake.takeRowAndReplace(newCardForThisRow);
-        // 玩家收集这些牌（内部会计算猪头数并更新玩家分数）
-        player.addCollectedCards(takenCards);
-
-        int collectedBullheads = takenCards.stream().mapToInt(Card::getBullheads).sum();
 
         logger.info("玩家 {} {}，拿走牌列 {} 的牌。放置新牌 {}。新猪头总数: {}.",
                 player.getDisplayName(), reason, rowIndex + 1, newCardForThisRow.getNumber(), player.getScore());

@@ -51,6 +51,10 @@ public class GameRoomService {
             room.setPassword((String) payload.getOrDefault("password", ""));
         }
         room.setGameState(GameState.WAITING);
+        
+        // 设置游戏类型
+        String gameTypeCode = (String) payload.getOrDefault("gameType", com.example.top_hog_server.model.GameType.TOP_HOG.getCode());
+        room.setGameType(com.example.top_hog_server.model.GameType.fromCode(gameTypeCode));
 
         // Do not join creator automatically in HTTP request.
         // The client must connect via WebSocket to join properly.
@@ -70,7 +74,7 @@ public class GameRoomService {
         return room;
     }
 
-    public GameRoom joinRoom(String roomId, String password) {
+    public synchronized GameRoom joinRoom(String roomId, String password) {
         GameRoom room = activeRooms.get(roomId);
         if (room == null) {
             // Try load from DB
@@ -113,7 +117,7 @@ public class GameRoomService {
         return list.subList(start, end);
     }
 
-    public void leaveRoom(String roomId) {
+    public synchronized void leaveRoom(String roomId) {
         UserDetailsImpl user = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         GameRoom room = activeRooms.get(roomId);
         if (room != null) {

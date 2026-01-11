@@ -29,123 +29,18 @@
     </Transition>
 
     <div class="game-layout">
-        <!-- Main Game Area -->
-        <div class="game-main">
-             <!-- Top Controls / Status -->
-            <div class="control-bar">
-                <div class="left-controls">
-                    <button v-if="gameState === 'WAITING'"
-                            :class="['btn', isMyPlayerReady ? 'btn-danger' : 'btn-success']"
-                            @click="toggleReady"
-                            :disabled="isMyPlayerBot">
-                        {{ isMyPlayerReady ? '取消准备' : '准备' }}
-                    </button>
-                    <button v-if="isMyPlayerHost && gameState === 'WAITING'" class="btn btn-secondary" @click="addBot">
-                        + 机器人
-                    </button>
-                    <button v-if="canStartGame" class="btn btn-primary" @click="startGame">
-                        开始游戏
-                    </button>
-                </div>
-
-                <div class="right-controls">
-                    <!-- Trustee Button: Only visible when game is NOT waiting -->
-                    <button @click="toggleAutoPlay"
-                            :class="['btn', isMyPlayerBot ? 'btn-danger' : 'btn-info', 'trustee-btn']"
-                            v-if="myPlayer && gameState !== 'WAITING'">
-                        <span class="btn-icon">{{ isMyPlayerBot ? '🤖' : '🎮' }}</span>
-                        {{ isMyPlayerBot ? '取消托管' : '开启托管' }}
-                    </button>
-
-                    <button v-if="gameState === 'GAME_OVER'"
-                            class="btn btn-primary"
-                            @click="playAgain"
-                            :disabled="hasRequestedNewGame">
-                        {{ hasRequestedNewGame ? '已请求' : '再来一局' }}
-                    </button>
-
-                    <button class="btn btn-outline" @click="leaveRoom">离开</button>
-                </div>
-            </div>
-
-            <!-- Messages -->
-            <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
-            <div v-if="joiningFeedback" class="alert alert-info">{{ joiningFeedback }}</div>
-
-            <!-- Choice Area -->
-            <Transition name="slide-down">
-                <div v-if="showChoiceArea" class="choice-panel">
-                    <h3>⚠️ 请选择要收取的牌列</h3>
-                    <div class="choice-info">
-                        <p>您打出的牌: <span class="card-badge">{{ cardLeadingToChoice ? `${cardLeadingToChoice.number}` : '' }} <small>🐂{{ cardLeadingToChoice ? cardLeadingToChoice.bullheads : '' }}</small></span></p>
-                        <p class="timer-text">剩余时间: {{ choiceTimer }}s</p>
-                    </div>
-                </div>
-            </Transition>
-
-            <!-- Board (Rows) -->
-            <div class="board-area">
-                <div v-for="(row, index) in gameRows" :key="index" class="board-row" :class="{ 'row-selectable': showChoiceButtons && choiceOptions.some(opt => opt.rowIndex === index) }">
-                    <div class="row-header">
-                        <span class="row-label">行 {{ index + 1 }}</span>
-                        <span class="row-bullheads" v-if="row.cards && row.cards.length > 0">
-                           🐂 {{ row.cards.reduce((acc, c) => acc + c.bullheads, 0) }}
-                        </span>
-                    </div>
-
-                    <div class="row-cards">
-                        <div v-for="card in row.cards" :key="card.number" class="game-card">
-                            <div class="card-top">{{ card.number }}</div>
-                            <div class="card-center">🐂</div>
-                            <div class="card-bottom">{{ card.bullheads }}</div>
-                        </div>
-                        <div v-if="!row.cards || row.cards.length === 0" class="empty-slot">Empty</div>
-                    </div>
-
-                    <!-- Selection Overlay for Choice -->
-                    <div v-if="showChoiceButtons && choiceOptions.some(opt => opt.rowIndex === index)" class="row-overlay">
-                         <button class="btn btn-warning select-row-btn" @click="chooseRow(index)">
-                             选择此行 (+{{ getChoiceBullheads(index) }} 🐂)
-                         </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Player Hand -->
-            <div class="hand-area">
-                <div class="hand-header">
-                    <h3>我的手牌</h3>
-                     <div class="my-info">
-                        <span class="player-badge" :class="{ 'is-trustee': isMyPlayerBot }">
-                            {{ myPlayer ? myPlayer.displayName : 'Loading...' }}
-                        </span>
-                     </div>
-                </div>
-
-                <div class="hand-cards">
-                     <div v-if="myHand.length === 0" class="no-cards">无手牌</div>
-                     <div v-else
-                          v-for="card in sortedHand"
-                          :key="card.number"
-                          :class="['game-card', 'hand-card', { 'selected': selectedCard && selectedCard.number === card.number }]"
-                          @click="selectCard(card)">
-                         <div class="card-top">{{ card.number }}</div>
-                         <div class="card-center">🐂</div>
-                         <div class="card-bottom">{{ card.bullheads }}</div>
-                     </div>
-                </div>
-
-                <div class="action-bar">
-                    <button class="btn btn-action" @click="playCard" :disabled="!canPlayCard">
-                        出牌
-                    </button>
-                    <button class="btn btn-outline-warning" @click="getTip" :disabled="!canGetTip">
-                        💡 提示
-                    </button>
-                </div>
-                <div v-if="tipMessage" class="tip-bubble">{{ tipMessage }}</div>
-            </div>
-        </div>
+        <!-- Main Game Area: Dynamically Loaded -->
+        <component 
+            :is="currentGameComponent"
+            ref="gameBoardRef"
+            :gameState="gameState"
+            :roomState="roomState"
+            :mySessionId="mySessionId"
+            :userInfo="userInfo"
+            :wsSend="send"
+            @leaveRoom="onLeaveRoom"
+            @addBot="onAddBot"
+        />
 
         <!-- Sidebar -->
         <div class="game-sidebar">
@@ -202,9 +97,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch, shallowRef } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '../services/api';
+import TopHogBoard from '../components/game/TopHogBoard.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -213,20 +109,18 @@ const userInfo = reactive(JSON.parse(localStorage.getItem('user_info') || '{}'))
 
 // Refs
 const bgmAudio = ref(null);
-const sfxAudio = ref(null);
 const chatBox = ref(null);
 const logBox = ref(null);
+const gameBoardRef = ref(null); // Ref to the dynamic child component
 
 // State
 const ws = ref(null);
 const isConnected = ref(false);
-const roomInfo = reactive({ roomName: '', roomId: '' });
+const roomInfo = reactive({ roomName: '', roomId: '', gameType: 'top_hog' });
 const gameState = ref('WAITING');
-const gameRows = ref([]);
+const roomState = ref({}); // Store full room state to pass to child
 const players = ref({});
 const mySessionId = ref(null);
-const myHand = ref([]);
-const selectedCard = ref(null);
 const isMusicPlaying = ref(false);
 const chatMessages = ref([]);
 const logs = ref([]);
@@ -234,15 +128,6 @@ const quickChat = ref('');
 const chatInput = ref('');
 const errorMessage = ref('');
 const joiningFeedback = ref('');
-const tipMessage = ref('');
-const isWaitingForTurnProcessing = ref(false);
-
-// Choice State
-const showChoiceArea = ref(false);
-const choiceOptions = ref([]);
-const cardLeadingToChoice = ref(null);
-const choiceTimer = ref(30);
-let choiceInterval = null;
 
 // Victory Overlay
 const showVictoryOverlay = ref(false);
@@ -273,57 +158,18 @@ const quickChatOptions = [
 ];
 
 // Computed
-const sortedHand = computed(() => {
-    return [...myHand.value].sort((a, b) => a.number - b.number);
-});
-
 const playerList = computed(() => Object.values(players.value));
 const playerCount = computed(() => playerList.value.length);
 const maxPlayers = computed(() => roomInfo.maxPlayers || 10);
 
-const myPlayer = computed(() => {
-    if (!players.value) return null;
-    return Object.values(players.value).find(p => {
-        if (mySessionId.value && p.sessionId === mySessionId.value) return true;
-        if (userInfo.id && p.userId && String(p.userId) === String(userInfo.id)) return true;
-        return false;
-    });
-});
-
-const isMe = (player) => {
-    return myPlayer.value && (player.sessionId === myPlayer.value.sessionId);
-};
-
-const isMyPlayerHost = computed(() => myPlayer.value?.isHost);
-const isMyPlayerReady = computed(() => myPlayer.value?.isReady);
-const isMyPlayerBot = computed(() => myPlayer.value?.isTrustee);
-const hasRequestedNewGame = computed(() => myPlayer.value?.requestedNewGame);
-
-const canStartGame = computed(() => {
-    if (gameState.value !== 'WAITING') return false;
-    if (!myPlayer.value || myPlayer.value.isTrustee) return false;
-    const humans = playerList.value.filter(p => !p.isTrustee);
-    const readyHumans = humans.filter(p => p.isReady);
-    return humans.length >= 2 && readyHumans.length === humans.length;
-});
-
-const canPlayCard = computed(() => {
-    return gameState.value === 'PLAYING' &&
-           !isWaitingForTurnProcessing.value &&
-           myPlayer.value &&
-           !myPlayer.value.isTrustee &&
-           selectedCard.value;
-});
-
-const canGetTip = computed(() => {
-    return gameState.value === 'PLAYING' &&
-           !isWaitingForTurnProcessing.value &&
-           myPlayer.value &&
-           !myPlayer.value.isTrustee;
-});
-
-const showChoiceButtons = computed(() => {
-    return showChoiceArea.value;
+const currentGameComponent = computed(() => {
+    // Should map roomInfo.gameType to component
+    // Default to TopHogBoard
+    if (roomInfo.gameType === 'example_game') {
+        // return ExampleGameBoard;
+        return TopHogBoard; // Fallback for now
+    }
+    return TopHogBoard;
 });
 
 // Methods
@@ -412,66 +258,34 @@ const handleMessage = (data) => {
         nextTick(() => {
             if (chatBox.value) chatBox.value.scrollTop = chatBox.value.scrollHeight;
         });
-    } else if (data.type === 'playTipResponse') {
-        if (data.success && data.tip) {
-            const tip = data.tip;
-            tipMessage.value = `AI建议: ${tip.suggestedCardNumber} (预计牛头: ${tip.estimatedBullheads}). ${tip.reason}`;
-            const card = myHand.value.find(c => c.number === tip.suggestedCardNumber);
-            if (card) selectCard(card);
-        } else {
-            tipMessage.value = `${data.message}`;
-        }
-    } else if (data.type === 'needSelectRow') {
-        const payload = data.data;
-        choiceOptions.value = payload.options;
-        cardLeadingToChoice.value = { number: payload.cardNumber, bullheads: '?' };
-        showChoiceArea.value = true;
-        choiceTimer.value = (payload.timeout || 30000) / 1000;
-        if (choiceInterval) clearInterval(choiceInterval);
-        choiceInterval = setInterval(() => {
-            choiceTimer.value--;
-            if (choiceTimer.value <= 0) clearInterval(choiceInterval);
-        }, 1000);
     } else if (data.type === 'error') {
         errorMessage.value = data.message;
-        isWaitingForTurnProcessing.value = false;
         setTimeout(() => errorMessage.value = '', 5000);
     } else if (data.type === 'leftRoomSuccess') {
         router.push('/lobby');
     } else if (data.type === 'roomClosed') {
         alert(data.message || "房间已关闭");
         router.push('/lobby');
+    } else {
+        // Delegate other game-specific messages (like 'needSelectRow', 'playTipResponse') to child component
+        if (gameBoardRef.value && gameBoardRef.value.handleGameEvent) {
+            gameBoardRef.value.handleGameEvent(data);
+        }
     }
 };
 
 const updateGameState = (state) => {
+    roomState.value = state; // Update full state for child
     roomInfo.roomName = state.roomName;
     roomInfo.maxPlayers = state.maxPlayers;
-    roomInfo.playerChoosingRowSessionId = state.playerChoosingRowSessionId;
+    roomInfo.gameType = state.gameType || 'top_hog';
+    
+    gameState.value = state.gameState;
+    players.value = state.players || {};
 
     if (gameState.value === 'GAME_OVER' && state.gameState !== 'GAME_OVER') {
         victoryOverlayManuallyClosed.value = false;
         sessionStorage.removeItem(`victory_ack_${roomId.value}`);
-    }
-
-    gameState.value = state.gameState;
-    gameRows.value = state.rows || [];
-    players.value = state.players || {};
-
-    if (myPlayer.value && myPlayer.value.hand) {
-        myHand.value = myPlayer.value.hand;
-    } else {
-        myHand.value = [];
-    }
-
-    if (isWaitingForTurnProcessing.value && state.gameState === 'PLAYING') {
-         isWaitingForTurnProcessing.value = false;
-         joiningFeedback.value = '';
-    }
-
-    if (state.gameState !== 'WAITING_FOR_PLAYER_CHOICE') {
-        showChoiceArea.value = false;
-        if (choiceInterval) clearInterval(choiceInterval);
     }
 
     if (state.gameState === 'GAME_OVER') {
@@ -489,54 +303,6 @@ const updateGameState = (state) => {
     }
 };
 
-const toggleReady = () => {
-    send({ type: 'playerReady', roomId: roomId.value });
-};
-
-const startGame = () => {
-    send({ type: 'startGame', roomId: roomId.value });
-};
-
-const toggleAutoPlay = () => {
-    send({ type: 'toggleAutoPlay', roomId: roomId.value });
-};
-
-const addBot = async () => {
-    try {
-        const response = await api.post('/room/add-bots', { roomId: roomId.value, botCount: 1 });
-        if (response.data.code !== 200) alert(response.data.message);
-    } catch (e) {
-        alert(e.response?.data?.message || '添加机器人失败');
-    }
-};
-
-const selectCard = (card) => {
-    selectedCard.value = card;
-    tipMessage.value = '';
-};
-
-const playCard = () => {
-    if (!selectedCard.value) return;
-    isWaitingForTurnProcessing.value = true;
-    joiningFeedback.value = "正在出牌...";
-    send({ type: 'playCard', roomId: roomId.value, data: { cardNumber: selectedCard.value.number } });
-    selectedCard.value = null;
-};
-
-const getTip = () => {
-    send({ type: 'requestPlayTip', roomId: roomId.value });
-};
-
-const chooseRow = (rowIndex) => {
-    send({ type: 'selectRow', roomId: roomId.value, rowIndex: rowIndex });
-    showChoiceArea.value = false;
-};
-
-const getChoiceBullheads = (rowIndex) => {
-    const opt = choiceOptions.value.find(o => o.rowIndex === rowIndex);
-    return opt ? opt.bullheads : '?';
-};
-
 const handleQuickChat = () => {
     if (quickChat.value) {
         chatInput.value = quickChat.value;
@@ -550,20 +316,31 @@ const sendChat = () => {
     quickChat.value = '';
 };
 
-const leaveRoom = () => {
+// Actions exposed to child via event or just child calling props.wsSend directly
+const onLeaveRoom = () => {
     if (confirm("确定要离开房间吗？")) {
         send({ type: 'leaveRoom', roomId: roomId.value });
     }
 };
 
-const playAgain = () => {
-    send({ type: 'requestNewGame', roomId: roomId.value });
-};
+const onAddBot = async () => {
+     try {
+        const response = await api.post('/room/add-bots', { roomId: roomId.value, botCount: 1 });
+        if (response.data.code !== 200) alert(response.data.message);
+    } catch (e) {
+        alert(e.response?.data?.message || '添加机器人失败');
+    }
+}
 
 const closeVictoryOverlay = () => {
     showVictoryOverlay.value = false;
     victoryOverlayManuallyClosed.value = true;
     sessionStorage.setItem(`victory_ack_${roomId.value}`, 'true');
+};
+
+// Utils for sidebar
+const isMe = (player) => {
+    return (player.sessionId === mySessionId.value);
 };
 
 const getStatusClass = (player) => {
@@ -601,9 +378,7 @@ watch(
       chatMessages.value = [];
       logs.value = [];
       players.value = {};
-      gameRows.value = [];
-      myHand.value = [];
-      selectedCard.value = null;
+      roomState.value = {};
       gameState.value = 'WAITING';
       nextTick(() => {
         connect();

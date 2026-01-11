@@ -13,6 +13,11 @@
             <h2>创建房间</h2>
             <div class="input-group">
                 <input v-model="newRoomName" placeholder="房间名称" />
+                <select v-model="selectedGameType" class="game-select">
+                    <option v-for="game in games" :key="game.code" :value="game.code">
+                        {{ game.displayName }}
+                    </option>
+                </select>
                 <button @click="createRoom" :disabled="loading">创建</button>
             </div>
             <div class="input-group">
@@ -93,11 +98,36 @@ const fetchRooms = async () => {
     }
 };
 
+onMounted(() => {
+    fetchRooms();
+    fetchGames();
+});
+
+const games = ref([]);
+const selectedGameType = ref('top_hog');
+
+const fetchGames = async () => {
+    try {
+        const response = await api.get('/game-config/enabled');
+        if (response.data.code === 200) {
+            games.value = response.data.data;
+            if (games.value.length > 0) {
+                selectedGameType.value = games.value[0].code;
+            }
+        }
+    } catch (error) {
+        console.error("Fetch games failed", error);
+    }
+};
+
 const createRoom = async () => {
     if (!newRoomName.value.trim()) return;
     loading.value = true;
     try {
-        const response = await api.post('/room/create', { roomName: newRoomName.value });
+        const response = await api.post('/room/create', { 
+            roomName: newRoomName.value,
+            gameType: selectedGameType.value 
+        });
         if (response.data.code === 200) {
             const room = response.data.data;
             joinRoom(room.roomId);
@@ -140,10 +170,6 @@ const joinRoom = async (roomId) => {
          alert(error.response?.data?.message || '加入房间失败');
     }
 };
-
-onMounted(() => {
-    fetchRooms();
-});
 </script>
 
 <style scoped>

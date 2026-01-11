@@ -13,6 +13,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,9 +29,13 @@ public class WechatService {
     @Autowired
     private JwtUtils jwtUtils;
 
-    // 建议：正式上线请将这些配置放入 application.yml
-    private static final String APP_ID = "wx4d79aa8fc3470971";
-    private static final String APP_SECRET = "7ff4fae3ca994f587c5d27fcd579887b";
+    private static final Logger logger = LoggerFactory.getLogger(WechatService.class);
+
+    @Value("${wechat.app-id}")
+    private String appId;
+
+    @Value("${wechat.app-secret}")
+    private String appSecret;
 
     public WechatLoginResponse login(WechatLoginRequest request) {
         // 1. 校验参数
@@ -38,13 +46,14 @@ public class WechatService {
 
         // 2. 请求微信接口
         String wxLoginUrl = "https://api.weixin.qq.com/sns/jscode2session" +
-                "?appid=" + APP_ID +
-                "&secret=" + APP_SECRET +
+                "?appid=" + appId +
+                "&secret=" + appSecret +
                 "&js_code=" + code +
                 "&grant_type=authorization_code";
 
         RestTemplate restTemplate = new RestTemplate();
-        String response = restTemplate.getForObject(wxLoginUrl, String.class);
+        ResponseEntity<String> responseEntity = restTemplate.getForEntity(wxLoginUrl, String.class);
+        String response = responseEntity.getBody();
 
         try {
             // 3. 解析微信返回数据
@@ -58,7 +67,7 @@ public class WechatService {
             String openid = (String) wxResult.get("openid");
             String sessionKey = (String) wxResult.get("session_key");
 
-            System.out.println("微信登录成功，OpenID: " + openid);
+            logger.info("微信登录成功，OpenID: {}", openid);
 
             // ==========================================
             // 4. 数据库逻辑 (适配 User.java)
@@ -117,7 +126,7 @@ public class WechatService {
             );
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("登录处理异常", e);
             throw new RuntimeException("登录处理异常: " + e.getMessage());
         }
     }

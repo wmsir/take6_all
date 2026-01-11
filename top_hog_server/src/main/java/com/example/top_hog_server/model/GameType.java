@@ -20,6 +20,7 @@ public enum GameType {
         this.description = description;
     }
 
+    @com.fasterxml.jackson.annotation.JsonValue
     public String getCode() {
         return code;
     }
