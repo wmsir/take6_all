@@ -72,6 +72,9 @@ public class GameRoom {
     @Transient
     private Map<String, List<Card>> allPlayerHandsForAI;
 
+    @Transient
+    private long createdAtTimestamp = System.currentTimeMillis();
+
     public GameRoom(String roomId, String roomName) {
         this.roomId = roomId;
         this.roomName = roomName;
