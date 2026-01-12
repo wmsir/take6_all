@@ -807,9 +807,12 @@ Page({
    * 离开房间
    */
   handleLeaveRoom() {
+    const isHost = this.data.isHost;
+    const content = isHost ? '你是房主，离开将导致房间销毁。确定要离开吗？' : '确定要离开房间吗？';
+
     wx.showModal({
       title: '提示',
-      content: '确定要离开房间吗？',
+      content: content,
       success: (res) => {
         if (res.confirm) {
           const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');

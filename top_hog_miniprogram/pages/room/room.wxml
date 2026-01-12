@@ -35,6 +35,10 @@
 
     <!-- Action Buttons (Moved above player list) -->
     <view class="action-buttons-section">
+      <button class="action-btn secondary" bindtap="handleLeaveRoom">
+        离开
+      </button>
+
       <button class="action-btn secondary {{isMeReady ? 'active' : ''}}" bindtap="handleReady">
         {{isMeReady ? '取消准备' : '准备'}}
       </button>

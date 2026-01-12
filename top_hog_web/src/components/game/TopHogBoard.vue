@@ -5,6 +5,9 @@
          <!-- Game Status Bar (Optional, if game specific controls are needed) -->
         <div class="control-bar">
             <div class="left-controls">
+                <button v-if="gameState === 'WAITING'" class="btn btn-outline" @click="leaveRoom">
+                    离开
+                </button>
                 <button v-if="gameState === 'WAITING'"
                         :class="['btn', isMyPlayerReady ? 'btn-danger' : 'btn-success']"
                         @click="toggleReady"
@@ -33,7 +36,7 @@
                         :disabled="hasRequestedNewGame">
                     {{ hasRequestedNewGame ? '已请求' : '再来一局' }}
                 </button>
-                <button class="btn btn-outline" @click="leaveRoom">离开</button>
+                <button v-if="gameState !== 'WAITING'" class="btn btn-outline" @click="leaveRoom">离开</button>
             </div>
         </div>
 
