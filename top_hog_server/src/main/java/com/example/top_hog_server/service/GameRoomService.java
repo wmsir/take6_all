@@ -102,6 +102,29 @@ public class GameRoomService {
     }
 
     public List<GameRoom> listRooms(int page, int pageSize, boolean onlyAvailable) {
+        // Filter and cleanup active rooms
+        long now = System.currentTimeMillis();
+        List<String> roomsToRemove = new ArrayList<>();
+
+        for (GameRoom room : activeRooms.values()) {
+            // Check if room has been created for more than 10 seconds
+            if (now - room.getCreatedAtTimestamp() > 10000) {
+                // Check if host is present
+                boolean hostPresent = room.getPlayers().values().stream()
+                        .anyMatch(p -> p.getUserId() != null && p.getUserId().equals(room.getOwnerId()));
+
+                if (!hostPresent) {
+                    roomsToRemove.add(room.getRoomId());
+                }
+            }
+        }
+
+        // Remove invalid rooms
+        for (String roomId : roomsToRemove) {
+            activeRooms.remove(roomId);
+            gameRoomRepository.deleteById(roomId);
+        }
+
         // Simple pagination on memory list
         List<GameRoom> list = new ArrayList<>(activeRooms.values());
         if (onlyAvailable) {
