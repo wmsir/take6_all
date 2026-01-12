@@ -226,6 +226,15 @@ Page({
         this.handleNewChatMessage(msg);
       } else if (msg.type === 'error') {
         wx.showToast({ title: msg.message || msg.data || '发生错误', icon: 'none' });
+      } else if (msg.type === 'roomClosed') {
+        wx.showModal({
+          title: '房间已解散',
+          content: msg.message || '房主已离开，房间已解散',
+          showCancel: false,
+          success: () => {
+            wx.switchTab({ url: '/pages/lobby/lobby' });
+          }
+        });
       }
     });
 

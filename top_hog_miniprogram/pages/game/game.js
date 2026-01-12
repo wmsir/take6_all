@@ -314,6 +314,15 @@ Page({
         // 服务器通知卡牌已放置到场牌，触发移动动画
         console.log('[GAME] 收到卡牌放置通知，开始移动动画');
         this.startCardMoveAnimation();
+      } else if (msg.type === 'roomClosed') {
+        wx.showModal({
+          title: '房间已解散',
+          content: msg.message || '房主已离开，房间已解散',
+          showCancel: false,
+          success: () => {
+            wx.switchTab({ url: '/pages/lobby/lobby' });
+          }
+        });
       }
     });
 

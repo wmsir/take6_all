@@ -6,6 +6,7 @@ import com.example.top_hog_server.model.Player;
 import com.example.top_hog_server.repository.GameHistoryRepository;
 import com.example.top_hog_server.repository.UserRepository;
 import com.example.top_hog_server.handler.GameWebSocketHandler;
+import com.example.top_hog_server.service.game.GameEngineFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,6 +39,9 @@ public class RoomDestructionTest {
     @Mock
     private BotProfileService botProfileService;
 
+    @Mock
+    private GameEngineFactory gameEngineFactory;
+
     private GameLogicService gameLogicService;
 
     @BeforeEach
@@ -48,7 +52,8 @@ public class RoomDestructionTest {
                 gameHistoryRepository,
                 gameWebSocketHandler,
                 taskScheduler,
-                botProfileService
+                botProfileService,
+                gameEngineFactory
         );
     }
 
