@@ -38,6 +38,9 @@ public enum ErrorCode {
     TASK_DELETE_FAILED(3003, "任务/备忘录删除失败"),
     CATEGORY_ALREADY_EXISTS(3004, "分类已存在"),
 
+    // 输入验证相关错误码
+    INVALID_INPUT(1004, "输入参数无效"),
+
     // 社交账号相关错误码 (4000-4999)
     SOCIAL_BIND_FAILED(4000, "社交账号绑定失败"),
     SOCIAL_UNBIND_FAILED(4001, "社交账号解绑失败");

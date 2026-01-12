@@ -1,7 +1,7 @@
 /* Onboarding / 登录页面样式 */
 .container {
   min-height: 100vh;
-  background: linear-gradient(to bottom, #0f172a 0%, #1e293b 100%);
+  background: linear-gradient(135deg, #1a2332 0%, #2d3748 50%, #1e2a3a 100%);
   position: relative;
   padding-bottom: 120rpx;
 }
@@ -72,11 +72,12 @@
 .auth-card,
 .phone-card,
 .loading-card {
-  background: rgba(30, 41, 59, 0.8);
-  border: 1rpx solid #334155;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(51, 65, 85, 0.95) 100%);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
   border-radius: 32rpx;
   padding: 32rpx;
-  backdrop-filter: blur(10rpx);
+  backdrop-filter: blur(20rpx);
+  box-shadow: 0 8rpx 32rpx rgba(0, 217, 126, 0.15);
 }
 
 /* 欢迎区域 */
@@ -117,7 +118,7 @@
 .wechat-btn {
   width: 100%;
   height: 88rpx;
-  background: #10b981;
+  background: linear-gradient(135deg, #00d97e 0%, #00b368 100%);
   border-radius: 22rpx;
   display: flex;
   align-items: center;
@@ -128,6 +129,13 @@
   font-weight: 600;
   border: none;
   margin-bottom: 16rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 217, 126, 0.4);
+  transition: all 0.3s ease;
+}
+
+.wechat-btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 4rpx 16rpx rgba(0, 217, 126, 0.3);
 }
 
 .wechat-btn[disabled] {
@@ -153,7 +161,7 @@
 }
 
 .agreement-link {
-  color: #10b981;
+  color: #00d97e;
   text-decoration: underline;
 }
 

@@ -1,7 +1,7 @@
 /* 对局页面样式 */
 .container {
   min-height: 100vh;
-  background: linear-gradient(to bottom, #0f172a 0%, #1e293b 100%);
+  background: linear-gradient(135deg, #1a2332 0%, #2d3748 50%, #1e2a3a 100%);
   padding-bottom: 200rpx;
 }
 
@@ -389,9 +389,21 @@
 }
 
 .board-card-item.fifth {
-  border-color: #f59e0b;
-  box-shadow: 0 0 16rpx rgba(245, 158, 11, 0.6);
-  background: linear-gradient(135deg, #1e293b 0%, #78350f 100%);
+  border-color: #ffd700;
+  background: linear-gradient(135deg, #ffd700 0%, #ffb800 100%);
+  box-shadow: 0 0 24rpx rgba(255, 215, 0, 0.8);
+  animation: cardGlow 2s ease-in-out infinite;
+}
+
+@keyframes cardGlow {
+  0%, 100% { 
+    box-shadow: 0 0 24rpx rgba(255, 215, 0, 0.6);
+    border-color: #ffd700;
+  }
+  50% { 
+    box-shadow: 0 0 32rpx rgba(255, 215, 0, 1);
+    border-color: #ffed4e;
+  }
 }
 
 .board-card-item.danger {
@@ -598,10 +610,10 @@
 .hand-card-item.selected {
   width: 72rpx;
   height: 128rpx;
-  background: rgba(16, 185, 129, 0.2);
-  border: 2rpx solid #10b981;
+  background: linear-gradient(135deg, rgba(0, 217, 126, 0.3) 0%, rgba(0, 179, 104, 0.3) 100%);
+  border: 2rpx solid #00d97e;
   transform: translateY(-8rpx);
-  box-shadow: 0 8rpx 16rpx rgba(16, 185, 129, 0.3);
+  box-shadow: 0 8rpx 24rpx rgba(0, 217, 126, 0.5);
 }
 
 .card-selected-label {
@@ -675,9 +687,16 @@
 }
 
 .confirm-btn {
-  background: #10b981;
+  background: linear-gradient(135deg, #00d97e 0%, #00b368 100%);
   color: #0f172a;
   font-weight: 600;
+  box-shadow: 0 4rpx 16rpx rgba(0, 217, 126, 0.4);
+  transition: all 0.3s ease;
+}
+
+.confirm-btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 2rpx 12rpx rgba(0, 217, 126, 0.3);
 }
 
 .confirm-btn[disabled] {

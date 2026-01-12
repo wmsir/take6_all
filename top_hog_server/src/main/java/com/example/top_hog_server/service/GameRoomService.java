@@ -26,20 +26,28 @@ public class GameRoomService {
         this.gameRoomRepository = gameRoomRepository;
         // Load active rooms from DB if needed
         List<GameRoom> rooms = gameRoomRepository.findByGameState(GameState.WAITING);
-        for(GameRoom r : rooms) {
+        for (GameRoom r : rooms) {
             activeRooms.put(r.getRoomId(), r);
         }
         rooms = gameRoomRepository.findByGameState(GameState.PLAYING);
-        for(GameRoom r : rooms) {
+        for (GameRoom r : rooms) {
             activeRooms.put(r.getRoomId(), r);
         }
     }
+
+    @Autowired
+    private ContentSecurityService contentSecurityService;
 
     public GameRoom createRoom(Map<String, Object> payload) {
         UserDetailsImpl user = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
         String roomId = UUID.randomUUID().toString().substring(0, 4).toUpperCase(); // Short ID
         String roomName = (String) payload.getOrDefault("roomName", user.getNickname() + "的房间");
+
+        // 内容安全检测
+        if (!contentSecurityService.checkText(roomName, user.getOpenid())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "房间名包含违规内容,请修改后重试");
+        }
 
         GameRoom room = new GameRoom(roomId, roomName);
         room.setOwnerId(user.getId());
@@ -51,22 +59,29 @@ public class GameRoomService {
             room.setPassword((String) payload.getOrDefault("password", ""));
         }
         room.setGameState(GameState.WAITING);
-        
+
         // 设置游戏类型
-        String gameTypeCode = (String) payload.getOrDefault("gameType", com.example.top_hog_server.model.GameType.TOP_HOG.getCode());
+        String gameTypeCode = (String) payload.getOrDefault("gameType",
+                com.example.top_hog_server.model.GameType.TOP_HOG.getCode());
         room.setGameType(com.example.top_hog_server.model.GameType.fromCode(gameTypeCode));
 
         // Do not join creator automatically in HTTP request.
         // The client must connect via WebSocket to join properly.
-        // The `isHost` logic will be handled when the player actually joins via WebSocket or HTTP Join logic if it returns a player.
+        // The `isHost` logic will be handled when the player actually joins via
+        // WebSocket or HTTP Join logic if it returns a player.
         // According to requirements: "创建房间的用户自动成为房主，其 `isHost` 字段应为 `true`"
-        // But since we are not adding the player to the room object here (waiting for WS), we can't set it on a player object.
+        // But since we are not adding the player to the room object here (waiting for
+        // WS), we can't set it on a player object.
         // However, the `GameRoom` object is returned. It has an empty `players` map.
         // So the frontend will see an empty players map.
-        // If the frontend expects the creator to be in `players`, we might need to add them.
-        // Memory says: "To prevent 'ghost players,' users are added to the active in-memory game state only upon establishing a WebSocket connection, not during the HTTP join request."
+        // If the frontend expects the creator to be in `players`, we might need to add
+        // them.
+        // Memory says: "To prevent 'ghost players,' users are added to the active
+        // in-memory game state only upon establishing a WebSocket connection, not
+        // during the HTTP join request."
         // So we adhere to that. The players map will be empty.
-        // The frontend creates the room, gets the ID, connects WS, then sends "joinRoom" or similar, or the backend auto-joins on connect if possible.
+        // The frontend creates the room, gets the ID, connects WS, then sends
+        // "joinRoom" or similar, or the backend auto-joins on connect if possible.
 
         activeRooms.put(roomId, room);
         gameRoomRepository.save(room);
@@ -78,13 +93,13 @@ public class GameRoomService {
         GameRoom room = activeRooms.get(roomId);
         if (room == null) {
             // Try load from DB
-             Optional<GameRoom> r = gameRoomRepository.findById(roomId);
-             if(r.isPresent()) {
-                 room = r.get();
-                 activeRooms.put(roomId, room);
-             } else {
-                 throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "Room not found");
-             }
+            Optional<GameRoom> r = gameRoomRepository.findById(roomId);
+            if (r.isPresent()) {
+                room = r.get();
+                activeRooms.put(roomId, room);
+            } else {
+                throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "Room not found");
+            }
         }
 
         if (room.isPrivate() && !room.getPassword().equals(password)) {
@@ -95,7 +110,7 @@ public class GameRoomService {
         // Just return the room info. The client will connect via WebSocket.
         // If we want to prevent overfill, we check count here.
         if (room.getPlayers().size() >= room.getMaxPlayers()) {
-             throw new BusinessException(ErrorCode.ACCESS_DENIED, "Room is full");
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "Room is full");
         }
 
         return room;
@@ -129,8 +144,8 @@ public class GameRoomService {
         List<GameRoom> list = new ArrayList<>(activeRooms.values());
         if (onlyAvailable) {
             list = list.stream()
-                .filter(r -> r.getGameState() == GameState.WAITING && r.getCurrentPlayers() < r.getMaxPlayers())
-                .collect(Collectors.toList());
+                    .filter(r -> r.getGameState() == GameState.WAITING && r.getCurrentPlayers() < r.getMaxPlayers())
+                    .collect(Collectors.toList());
         }
 
         // Sort by created time? roomId is random.
@@ -152,7 +167,6 @@ public class GameRoomService {
         }
     }
 
-
     public void startGame(String roomId) {
         UserDetailsImpl user = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         GameRoom room = activeRooms.get(roomId);
@@ -161,13 +175,15 @@ public class GameRoomService {
         }
 
         if (!room.getOwnerId().equals(user.getId())) {
-             throw new BusinessException(ErrorCode.ACCESS_DENIED, "Only owner can start game");
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "Only owner can start game");
         }
 
         // Logic to start game (deal cards, etc.)
         // Calling GameLogicService?
-        // Since GameLogicService is autowired in Controller, maybe I should put logic there or inject it here.
-        // Ideally GameRoomService handles Room management, GameLogicService handles Game.
+        // Since GameLogicService is autowired in Controller, maybe I should put logic
+        // there or inject it here.
+        // Ideally GameRoomService handles Room management, GameLogicService handles
+        // Game.
         // Starting game is a transition.
     }
 
@@ -185,7 +201,7 @@ public class GameRoomService {
     }
 
     public List<GameRoom> getAllAvailableRooms() {
-         return activeRooms.values().stream()
+        return activeRooms.values().stream()
                 .filter(room -> room.getGameState() == GameState.WAITING &&
                         room.getPlayers().size() < room.getMaxPlayers())
                 .collect(Collectors.toList());
@@ -209,7 +225,7 @@ public class GameRoomService {
 
         // 选择第一个可用房间
         GameRoom room = availableRooms.get(0);
-        
+
         // 加入该房间（不需要密码，因为是公开房间）
         return joinRoom(room.getRoomId(), "");
     }

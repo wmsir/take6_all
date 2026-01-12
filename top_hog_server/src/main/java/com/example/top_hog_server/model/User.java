@@ -73,6 +73,10 @@ public class User {
     @Column(name = "email_verified")
     private Boolean emailVerified;
 
+    // VIP过期时间
+    @Column(name = "vip_expire_time")
+    private java.time.LocalDateTime vipExpireTime;
+
     public Long getRegisterTime() {
         return createdAt != null ? createdAt.getTime() : null;
     }
@@ -91,5 +95,29 @@ public class User {
 
     public void setEmailVerified(boolean emailVerified) {
         this.emailVerified = emailVerified;
+    }
+
+    // openid别名方法,指向wechatOpenid
+    public String getOpenid() {
+        return this.wechatOpenid;
+    }
+
+    public void setOpenid(String openid) {
+        this.wechatOpenid = openid;
+    }
+
+    // VIP状态判断
+    public boolean isVip() {
+        if (vipExpireTime == null) {
+            return false;
+        }
+        return vipExpireTime.isAfter(java.time.LocalDateTime.now());
+    }
+
+    public void setVip(boolean vip) {
+        // 这个方法主要用于兼容,实际VIP状态由vipExpireTime决定
+        if (!vip) {
+            this.vipExpireTime = null;
+        }
     }
 }

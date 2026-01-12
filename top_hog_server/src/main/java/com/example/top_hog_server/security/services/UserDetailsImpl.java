@@ -9,7 +9,7 @@ import java.util.Collection;
 import java.util.Objects;
 
 public class UserDetailsImpl implements UserDetails {
-    
+
     private static final long serialVersionUID = 2375620020645199359L;
 
     private Long id;
@@ -27,9 +27,9 @@ public class UserDetailsImpl implements UserDetails {
     @JsonIgnore
     private String password;
 
-    public UserDetailsImpl(Long id, String username, String email, String password, 
-                          String nickname,String qqOpenid, String wechatOpenid,  String avatarUrl, String phone,
-                          String inviteCode, Integer vipStatus, Long tenantId) {
+    public UserDetailsImpl(Long id, String username, String email, String password,
+            String nickname, String qqOpenid, String wechatOpenid, String avatarUrl, String phone,
+            String inviteCode, Integer vipStatus, Long tenantId) {
         this.id = id;
         this.username = username;
         this.email = email;
@@ -43,8 +43,6 @@ public class UserDetailsImpl implements UserDetails {
         this.vipStatus = vipStatus;
         this.tenantId = tenantId;
     }
-
-
 
     public static UserDetailsImpl build(User user) {
         // 如果 username 为空（例如微信登录用户），尝试使用 openid 作为 username
@@ -79,23 +77,23 @@ public class UserDetailsImpl implements UserDetails {
     public String getEmail() {
         return email;
     }
-    
+
     public String getNickname() {
         return nickname;
     }
-    
+
     public String getAvatarUrl() {
         return avatarUrl;
     }
-    
+
     public String getPhone() {
         return phone;
     }
-    
+
     public String getInviteCode() {
         return inviteCode;
     }
-    
+
     public Integer getVipStatus() {
         return vipStatus;
     }
@@ -138,7 +136,6 @@ public class UserDetailsImpl implements UserDetails {
     public boolean isEnabled() {
         return true;
     }
-
 
     public void setId(Long id) {
         this.id = id;
@@ -200,5 +197,10 @@ public class UserDetailsImpl implements UserDetails {
             return false;
         UserDetailsImpl user = (UserDetailsImpl) o;
         return Objects.equals(id, user.id);
+    }
+
+    // openid别名方法,指向wechatOpenid
+    public String getOpenid() {
+        return this.wechatOpenid;
     }
 }

@@ -31,8 +31,12 @@ public class UserService {
     @Autowired
     private OssService ossService;
 
+    @Autowired
+    private ContentSecurityService contentSecurityService;
+
     private User getCurrentUser() {
-        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication()
+                .getPrincipal();
         return userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "User not found"));
     }
@@ -47,7 +51,8 @@ public class UserService {
         info.put("registerTime", user.getRegisterTime());
         // stats
         long totalGames = gameHistoryRepository.countByUserId(user.getId());
-        info.put("totalScore", totalGames); // Requirements say totalScore, but implies stats. Let's put total games for now or calculate actual score sum.
+        info.put("totalScore", totalGames); // Requirements say totalScore, but implies stats. Let's put total games for
+                                            // now or calculate actual score sum.
         return info;
     }
 
@@ -78,7 +83,8 @@ public class UserService {
 
     public Map<String, Object> getUserHistory(int limit) {
         User user = getCurrentUser();
-        List<GameHistory> historyList = gameHistoryRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), PageRequest.of(0, limit));
+        List<GameHistory> historyList = gameHistoryRepository.findByUserIdOrderByCreatedAtDesc(user.getId(),
+                PageRequest.of(0, limit));
 
         List<Map<String, Object>> mappedList = historyList.stream().map(h -> {
             Map<String, Object> item = new HashMap<>();
@@ -100,7 +106,12 @@ public class UserService {
         User user = getCurrentUser();
 
         if (request.getNickname() != null && !request.getNickname().trim().isEmpty()) {
-            user.setNickname(request.getNickname().trim());
+            String nickname = request.getNickname().trim();
+            // 内容安全检测
+            if (!contentSecurityService.checkText(nickname, user.getOpenid())) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT, "昵称包含违规内容,请修改后重试");
+            }
+            user.setNickname(nickname);
         }
 
         if (request.getAvatarUrl() != null && !request.getAvatarUrl().trim().isEmpty()) {
@@ -123,6 +134,11 @@ public class UserService {
     public Map<String, Object> uploadAvatar(MultipartFile file) {
         User user = getCurrentUser();
         String avatarUrl = ossService.uploadFile(file);
+
+        // 图片内容安全检测
+        if (!contentSecurityService.checkImage(avatarUrl, user.getOpenid())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "头像包含违规内容,请更换后重试");
+        }
 
         user.setAvatarUrl(avatarUrl);
         userRepository.save(user);

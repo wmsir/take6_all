@@ -3,7 +3,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #f4f4f4;
+  background: linear-gradient(135deg, #1a2332 0%, #2d3748 50%, #1e2a3a 100%);
   padding: 20rpx 0;
 }
 
@@ -75,17 +75,20 @@
 }
 
 .create-btn {
-  background: #3498db;
+  background: linear-gradient(135deg, #00d97e 0%, #00b368 100%);
   color: #fff;
   border: none;
   border-radius: 32rpx;
   padding: 16rpx 40rpx;
   font-size: 28rpx;
   font-weight: bold;
-  transition: background 0.2s;
+  transition: all 0.3s ease;
+  box-shadow: 0 4rpx 16rpx rgba(0, 217, 126, 0.4);
 }
 .create-btn:active {
-  background: #217dbb;
+  background: linear-gradient(135deg, #00b368 0%, #009955 100%);
+  transform: scale(0.98);
+  box-shadow: 0 2rpx 12rpx rgba(0, 217, 126, 0.3);
 }
 
 .room-list-title {
@@ -164,7 +167,8 @@
   transition: background 0.2s;
 }
 .join-btn:active {
-  background: #217dbb;
+  background: linear-gradient(135deg, #00b368 0%, #009955 100%);
+  transform: scale(0.98);
 }
 
 /* 响应式适配 */
