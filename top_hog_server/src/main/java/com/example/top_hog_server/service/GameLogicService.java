@@ -39,6 +39,7 @@ public class GameLogicService {
     private final TaskScheduler taskScheduler;
     // 存储玩家选择的定时器
     private final Map<String, ScheduledFuture<?>> choiceTimers = new ConcurrentHashMap<>();
+    private final Map<String, Lock> roomLocks = new ConcurrentHashMap<>();
     private final BotProfileService botProfileService;
     private final GameEngineFactory gameEngineFactory; // 注入工厂
 
@@ -652,8 +653,9 @@ public class GameLogicService {
 
                 BotProfileService.BotProfile profile = profiles.get(i % profiles.size());
                 // 确保房间内名称唯一（如果可能的话，简单的冲突处理）
-                String botName = profile.getName();
-                if (room.getPlayers().values().stream().anyMatch(p -> p.getDisplayName().equals(profile.getName()))) {
+                final String originalName = profile.getName();
+                String botName = originalName;
+                if (room.getPlayers().values().stream().anyMatch(p -> p.getDisplayName().equals(originalName))) {
                      botName = botName + "_" + (i+1);
                 }
 
@@ -707,7 +709,8 @@ public class GameLogicService {
             room.getPlayedCardsThisTurn().put(trusteePlayer.getSessionId(), cardToPlay);
             trusteePlayer.removeCardFromHand(cardToPlay);
             if (room.getAllPlayerHandsForAI() != null && room.getAllPlayerHandsForAI().containsKey(trusteePlayer.getSessionId())) {
-                room.getAllPlayerHandsForAI().get(trusteePlayer.getSessionId()).removeIf(c -> c.getNumber() == cardToPlay.getNumber());
+                final Card finalCardToPlay = cardToPlay;
+                room.getAllPlayerHandsForAI().get(trusteePlayer.getSessionId()).removeIf(c -> c.getNumber() == finalCardToPlay.getNumber());
             }
             logger.info("托管玩家 {} 在房间 {} 自动打出牌: {}", trusteePlayer.getDisplayName(), room.getRoomId(), cardToPlay.getNumber());
         } else {
@@ -908,7 +911,7 @@ public class GameLogicService {
             // 任务执行前也移除自己，避免重复处理
             choiceTimers.remove(sessionId);
             handlePlayerChoiceTimeout(roomId, sessionId);
-        }, new Date(System.currentTimeMillis() + playerChoiceTimeoutMs));
+        }, java.time.Instant.now().plusMillis(playerChoiceTimeoutMs));
         // 保存这个计时器任务的引用
         choiceTimers.put(sessionId, scheduledTask);
     }
@@ -1017,6 +1020,7 @@ public class GameLogicService {
             if (engine instanceof TopHogGameEngine) {
                 autoChosenRowIndex = ((TopHogGameEngine) engine).findRowWithMinBullheads(room);
             }
+            int minBullheads = room.getRows().get(autoChosenRowIndex).getBullheadSum();
             logger.info("服务器为玩家 {} (超时) 在房间 {} 自动选择了牌列 {} (猪头数: {})。",
                     currentPlayer.getDisplayName(), roomId, autoChosenRowIndex + 1, minBullheads);
 
@@ -1650,7 +1654,7 @@ public class GameLogicService {
     private void scheduleRoomDestructionIfEmpty(String roomId, long delayMs) {
         taskScheduler.schedule(() -> {
             GameRoom room = gameRoomService.getRoom(roomId);
-            if (room == null) return;
+            if (room == null) { return; }
 
             Lock roomLock = getRoomLock(roomId);
             roomLock.lock();
