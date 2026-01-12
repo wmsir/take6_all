@@ -169,7 +169,7 @@ public class GameLogicService {
                 } finally {
                     roomLock.unlock();
                 }
-            }, java.time.Instant.now().plusMillis(500)); // 延迟500ms执行,避免重复触发
+            }, java.time.Instant.now().plusMillis(500)); // 使用Instant避免过时警告
         }
     }
 
@@ -1783,7 +1783,7 @@ public class GameLogicService {
             } finally {
                 roomLock.unlock();
             }
-        }, new Date(System.currentTimeMillis() + delayMs));
+        }, java.time.Instant.now().plusMillis(delayMs));
     }
 
     // 内部辅助类：用于AI提示返回结果

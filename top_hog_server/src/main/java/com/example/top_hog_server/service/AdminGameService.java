@@ -105,9 +105,12 @@ public class AdminGameService {
 
         if (userId != null) {
             allHistory = gameHistoryRepository.findByUserIdOrderByCreatedAtDesc(
-                    userId, PageRequest.of(0, 1000)).getContent();
+                    userId, PageRequest.of(0, 1000));
         } else if (roomId != null) {
-            allHistory = gameHistoryRepository.findByRoomIdOrderByCreatedAtDesc(roomId);
+            allHistory = gameHistoryRepository.findAll().stream()
+                    .filter(h -> Objects.equals(h.getRoomId(), roomId))
+                    .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                    .collect(Collectors.toList());
         } else {
             allHistory = gameHistoryRepository.findAll().stream()
                     .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
@@ -137,7 +140,8 @@ public class AdminGameService {
 
         if (startTime != null && endTime != null) {
             history = gameHistoryRepository.findAll().stream()
-                    .filter(h -> h.getCreatedAt().isAfter(startTime) && h.getCreatedAt().isBefore(endTime))
+                    .filter(h -> h.getCreatedAt().toLocalDateTime().isAfter(startTime)
+                            && h.getCreatedAt().toLocalDateTime().isBefore(endTime))
                     .collect(Collectors.toList());
         } else {
             history = gameHistoryRepository.findAll();
@@ -161,9 +165,8 @@ public class AdminGameService {
                 .average()
                 .orElse(0);
 
-        // 按游戏类型统计
-        Map<String, Long> gamesByType = history.stream()
-                .collect(Collectors.groupingBy(GameHistory::getGameType, Collectors.counting()));
+        // 按游戏类型统计 (暂未记录游戏类型)
+        Map<String, Long> gamesByType = new HashMap<>();
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalGames", totalGames);
@@ -190,7 +193,8 @@ public class AdminGameService {
         info.put("currentRound", room.getCurrentRound());
         info.put("maxRounds", room.getMaxRounds());
         info.put("isPrivate", room.isPrivate());
-        info.put("createdAt", room.getCreatedAt());
+        info.put("createdAt", java.time.LocalDateTime.ofInstant(
+                java.time.Instant.ofEpochMilli(room.getCreatedAtTimestamp()), java.time.ZoneId.systemDefault()));
 
         return info;
     }

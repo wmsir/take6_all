@@ -129,7 +129,7 @@ public class AnalyticsService {
         LocalDateTime endTime = endDate.atTime(LocalTime.MAX);
 
         List<GameHistory> history = gameHistoryRepository.findAll().stream()
-                .filter(h -> isInTimeRange(h.getCreatedAt(), startTime, endTime))
+                .filter(h -> isInTimeRange(toLocalDateTime(h.getCreatedAt()), startTime, endTime))
                 .collect(Collectors.toList());
 
         // 游戏场次统计
@@ -141,17 +141,16 @@ public class AnalyticsService {
         // 每日游戏场次
         Map<LocalDate, Long> dailyGames = history.stream()
                 .collect(Collectors.groupingBy(
-                        h -> h.getCreatedAt().toLocalDate(),
+                        h -> h.getCreatedAt().toLocalDateTime().toLocalDate(),
                         Collectors.collectingAndThen(
                                 Collectors.mapping(GameHistory::getRoomId, Collectors.toSet()),
-                                Set::size)));
+                                s -> (long) s.size())));
 
         // 平均游戏时长(简化计算)
         double avgDuration = 10.0; // 假设平均10分钟
 
-        // 游戏类型偏好
-        Map<String, Long> gameTypePreference = history.stream()
-                .collect(Collectors.groupingBy(GameHistory::getGameType, Collectors.counting()));
+        // 游戏类型偏好 (暂不支持游戏类型区分，返回空)
+        Map<String, Long> gameTypePreference = new HashMap<>();
 
         // 胜率分布(简化:按排名统计)
         Map<Integer, Long> rankDistribution = history.stream()
@@ -193,7 +192,7 @@ public class AnalyticsService {
      */
     private long getDailyActiveUsers(LocalDateTime start, LocalDateTime end) {
         return gameHistoryRepository.findAll().stream()
-                .filter(h -> isInTimeRange(h.getCreatedAt(), start, end))
+                .filter(h -> isInTimeRange(toLocalDateTime(h.getCreatedAt()), start, end))
                 .map(GameHistory::getUserId)
                 .distinct()
                 .count();
@@ -204,7 +203,7 @@ public class AnalyticsService {
      */
     private long getMonthlyActiveUsers(LocalDateTime start, LocalDateTime end) {
         return gameHistoryRepository.findAll().stream()
-                .filter(h -> isInTimeRange(h.getCreatedAt(), start, end))
+                .filter(h -> isInTimeRange(toLocalDateTime(h.getCreatedAt()), start, end))
                 .map(GameHistory::getUserId)
                 .distinct()
                 .count();
@@ -245,7 +244,7 @@ public class AnalyticsService {
         LocalDateTime todayEnd = date.atTime(LocalTime.MAX);
 
         long activeToday = gameHistoryRepository.findAll().stream()
-                .filter(h -> isInTimeRange(h.getCreatedAt(), todayStart, todayEnd))
+                .filter(h -> isInTimeRange(toLocalDateTime(h.getCreatedAt()), todayStart, todayEnd))
                 .map(GameHistory::getUserId)
                 .filter(newUserIds::contains)
                 .distinct()
@@ -321,7 +320,7 @@ public class AnalyticsService {
      */
     private Map<String, Long> getUserGameFrequency(LocalDateTime start, LocalDateTime end) {
         Map<Long, Long> userGameCount = gameHistoryRepository.findAll().stream()
-                .filter(h -> isInTimeRange(h.getCreatedAt(), start, end))
+                .filter(h -> isInTimeRange(toLocalDateTime(h.getCreatedAt()), start, end))
                 .collect(Collectors.groupingBy(GameHistory::getUserId, Collectors.counting()));
 
         Map<String, Long> frequency = new HashMap<>();

@@ -165,16 +165,16 @@ public class PaymentService {
             balance.setCoins(oldCoins + product.getCoins());
 
             // 记录交易日志
-            TransactionLog log = new TransactionLog();
-            log.setUserId(userId);
-            log.setType("RECHARGE");
-            log.setCurrency("COINS");
-            log.setAmount(product.getCoins());
-            log.setBalanceBefore(oldCoins);
-            log.setBalanceAfter(balance.getCoins());
-            log.setReason("充值-" + product.getName());
-            log.setOrderNo(order.getOrderNo());
-            transactionLogRepository.save(log);
+            TransactionLog txLog = new TransactionLog();
+            txLog.setUserId(userId);
+            txLog.setType("RECHARGE");
+            txLog.setCurrency("COINS");
+            txLog.setAmount(product.getCoins());
+            txLog.setBalanceBefore(oldCoins);
+            txLog.setBalanceAfter(balance.getCoins());
+            txLog.setReason("充值-" + product.getName());
+            txLog.setOrderNo(order.getOrderNo());
+            transactionLogRepository.save(txLog);
         }
 
         // 充值钻石
@@ -183,16 +183,16 @@ public class PaymentService {
             balance.setDiamonds(oldDiamonds + product.getDiamonds());
 
             // 记录交易日志
-            TransactionLog log = new TransactionLog();
-            log.setUserId(userId);
-            log.setType("RECHARGE");
-            log.setCurrency("DIAMONDS");
-            log.setAmount(product.getDiamonds());
-            log.setBalanceBefore(oldDiamonds);
-            log.setBalanceAfter(balance.getDiamonds());
-            log.setReason("充值-" + product.getName());
-            log.setOrderNo(order.getOrderNo());
-            transactionLogRepository.save(log);
+            TransactionLog txLog = new TransactionLog();
+            txLog.setUserId(userId);
+            txLog.setType("RECHARGE");
+            txLog.setCurrency("DIAMONDS");
+            txLog.setAmount(product.getDiamonds());
+            txLog.setBalanceBefore(oldDiamonds);
+            txLog.setBalanceAfter(balance.getDiamonds());
+            txLog.setReason("充值-" + product.getName());
+            txLog.setOrderNo(order.getOrderNo());
+            transactionLogRepository.save(txLog);
         }
 
         // 开通VIP
@@ -226,6 +226,83 @@ public class PaymentService {
     /**
      * 消费金币
      */
+
+    /**
+     * 增加金币(系统奖励)
+     */
+    @Transactional
+    public void addCoins(Long userId, Integer amount, String reason) {
+        addCoins(userId, amount.longValue(), reason);
+    }
+
+    @Transactional
+    public void addCoins(Long userId, Long amount, String reason) {
+        UserBalance balance = userBalanceRepository.findById(userId)
+                .orElseGet(() -> {
+                    UserBalance newBalance = new UserBalance();
+                    newBalance.setUserId(userId);
+                    // 尝试查找用户确保用户存在
+                    User user = userRepository.findById(userId)
+                            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "用户不存在"));
+                    newBalance.setUser(user);
+                    return newBalance;
+                });
+
+        Long oldCoins = balance.getCoins();
+        balance.setCoins(oldCoins + amount);
+        userBalanceRepository.save(balance);
+
+        // 记录交易日志
+        TransactionLog txLog = new TransactionLog();
+        txLog.setUserId(userId);
+        txLog.setType("REWARD"); // 奖励类型
+        txLog.setCurrency("COINS");
+        txLog.setAmount(amount);
+        txLog.setBalanceBefore(oldCoins);
+        txLog.setBalanceAfter(balance.getCoins());
+        txLog.setReason(reason);
+        transactionLogRepository.save(txLog);
+    }
+
+    /**
+     * 增加钻石(系统奖励)
+     */
+    @Transactional
+    public void addDiamonds(Long userId, Integer amount, String reason) {
+        addDiamonds(userId, amount.longValue(), reason);
+    }
+
+    @Transactional
+    public void addDiamonds(Long userId, Long amount, String reason) {
+        UserBalance balance = userBalanceRepository.findById(userId)
+                .orElseGet(() -> {
+                    UserBalance newBalance = new UserBalance();
+                    newBalance.setUserId(userId);
+                    User user = userRepository.findById(userId)
+                            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "用户不存在"));
+                    newBalance.setUser(user);
+                    return newBalance;
+                });
+
+        Long oldDiamonds = balance.getDiamonds();
+        balance.setDiamonds(oldDiamonds + amount);
+        userBalanceRepository.save(balance);
+
+        // 记录交易日志
+        TransactionLog txLog = new TransactionLog();
+        txLog.setUserId(userId);
+        txLog.setType("REWARD");
+        txLog.setCurrency("DIAMONDS");
+        txLog.setAmount(amount);
+        txLog.setBalanceBefore(oldDiamonds);
+        txLog.setBalanceAfter(balance.getDiamonds());
+        txLog.setReason(reason);
+        transactionLogRepository.save(txLog);
+    }
+
+    /**
+     * 消费金币
+     */
     @Transactional
     public void consumeCoins(Long userId, Long amount, String reason) {
         UserBalance balance = userBalanceRepository.findById(userId)
@@ -240,15 +317,15 @@ public class PaymentService {
         userBalanceRepository.save(balance);
 
         // 记录交易日志
-        TransactionLog log = new TransactionLog();
-        log.setUserId(userId);
-        log.setType("CONSUME");
-        log.setCurrency("COINS");
-        log.setAmount(amount);
-        log.setBalanceBefore(oldCoins);
-        log.setBalanceAfter(balance.getCoins());
-        log.setReason(reason);
-        transactionLogRepository.save(log);
+        TransactionLog txLog = new TransactionLog();
+        txLog.setUserId(userId);
+        txLog.setType("CONSUME");
+        txLog.setCurrency("COINS");
+        txLog.setAmount(amount);
+        txLog.setBalanceBefore(oldCoins);
+        txLog.setBalanceAfter(balance.getCoins());
+        txLog.setReason(reason);
+        transactionLogRepository.save(txLog);
 
         log.info("消费金币: userId={}, amount={}, reason={}", userId, amount, reason);
     }

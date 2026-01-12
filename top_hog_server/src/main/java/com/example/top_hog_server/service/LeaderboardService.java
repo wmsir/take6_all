@@ -48,7 +48,7 @@ public class LeaderboardService {
             // 这里简单处理,实际量大应在DB层面聚合
             LocalDateTime finalStartTime = startTime;
             history = gameHistoryRepository.findAll().stream()
-                    .filter(h -> h.getCreatedAt().isAfter(finalStartTime))
+                    .filter(h -> h.getCreatedAt().toLocalDateTime().isAfter(finalStartTime))
                     .collect(Collectors.toList());
         } else {
             history = gameHistoryRepository.findAll();

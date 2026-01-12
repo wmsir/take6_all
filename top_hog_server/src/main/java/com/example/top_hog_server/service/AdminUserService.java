@@ -182,15 +182,15 @@ public class AdminUserService {
         userBalanceRepository.save(balance);
 
         // 记录交易日志
-        TransactionLog log = new TransactionLog();
-        log.setUserId(userId);
-        log.setType(amount > 0 ? "REWARD" : "CONSUME");
-        log.setCurrency(currency);
-        log.setAmount(Math.abs(amount));
-        log.setBalanceBefore(oldBalance);
-        log.setBalanceAfter(newBalance);
-        log.setReason("GM操作:" + reason);
-        transactionLogRepository.save(log);
+        TransactionLog txLog = new TransactionLog();
+        txLog.setUserId(userId);
+        txLog.setType(amount > 0 ? "REWARD" : "CONSUME");
+        txLog.setCurrency(currency);
+        txLog.setAmount(Math.abs(amount));
+        txLog.setBalanceBefore(oldBalance);
+        txLog.setBalanceAfter(newBalance);
+        txLog.setReason("GM操作:" + reason);
+        transactionLogRepository.save(txLog);
 
         log.info("GM调整用户余额: userId={}, currency={}, amount={}, reason={}",
                 userId, currency, amount, reason);
