@@ -217,7 +217,7 @@ public class GameLogicService {
                 // requestedNewGame 已经在 resetForNewGame() 中被重置为 false 了
             }
 
-            broadcastGameState(roomId, "全员已同意再来一局。返回房间，准备开始。", room);
+            broadcastGameState(roomId, "全员已同意再来一局!游戏已重置,所有玩家已进入准备状态。房主可以开始游戏。", room);
 
         } finally {
             roomLock.unlock();
@@ -1281,22 +1281,35 @@ public class GameLogicService {
                 sendErrorToUserSession(session, roomId, "玩家未找到。");
                 return;
             }
+
             // 如果玩家是托管状态，解除托管
             if (p.isTrustee()) {
                 p.setTrustee(false);
                 broadcastGameState(roomId, p.getDisplayName() + " 取消托管并请求再来一局。", room);
             }
+
             p.setRequestedNewGame(true);
             long active = room.getPlayers().values().stream().filter(pl -> !pl.isTrustee()).count();
             long requested = room.getPlayers().values().stream()
                     .filter(pl -> !pl.isTrustee() && pl.isRequestedNewGame()).count();
+
+            // 判断是否是房主
+            boolean isHost = p.isHost();
+            String playerName = p.getDisplayName();
+
             // 改为>=，以防万一有额外请求
             if (active > 0 && requested >= active) {
-                // startGame(roomId, session.getId());
-                // 根据需求修改：当所有人都点击再来一局时，不直接开始游戏，而是重置到WAITING状态，并标记为准备就绪
+                // 所有活跃玩家都请求了,重置到WAITING状态
                 resetGameToWaiting(roomId, session.getId());
             } else {
-                broadcastGameState(roomId, p.getDisplayName() + " 请求再来一局 (" + requested + "/" + active + ")。", room);
+                // 还有玩家未请求
+                String message;
+                if (isHost) {
+                    message = "房主 " + playerName + " 发起再来一局请求,等待其他玩家响应 (" + requested + "/" + active + ")";
+                } else {
+                    message = playerName + " 已准备再来一局,等待其他玩家 (" + requested + "/" + active + ")";
+                }
+                broadcastGameState(roomId, message, room);
             }
         } finally {
             roomLock.unlock();

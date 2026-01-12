@@ -26,15 +26,16 @@
                 <!-- Trustee Button: Only visible when game is NOT waiting -->
                 <button @click="toggleAutoPlay"
                         :class="['btn', isMyPlayerBot ? 'btn-danger' : 'btn-info', 'trustee-btn']"
-                        v-if="myPlayer && gameState !== 'WAITING'">
+                        v-if="myPlayer && gameState !== 'WAITING' && gameState !== 'GAME_OVER'">
                     <span class="btn-icon">{{ isMyPlayerBot ? '🤖' : '🎮' }}</span>
                     {{ isMyPlayerBot ? '取消托管' : '开启托管' }}
                 </button>
-                 <button v-if="gameState === 'GAME_OVER'"
-                        class="btn btn-primary"
+                <!-- Play Again Button: Visible during game and after game over -->
+                <button v-if="gameState === 'GAME_OVER' || (gameState !== 'WAITING' && myPlayer)"
+                        :class="['btn', hasRequestedNewGame ? 'btn-secondary' : 'btn-success']"
                         @click="playAgain"
                         :disabled="hasRequestedNewGame">
-                    {{ hasRequestedNewGame ? '已请求' : '再来一局' }}
+                    {{ hasRequestedNewGame ? '✅ 已请求' : '🎮 再来一局' }}
                 </button>
                 <button v-if="gameState !== 'WAITING'" class="btn btn-outline" @click="leaveRoom">离开</button>
             </div>
