@@ -819,14 +819,18 @@ Page({
             roomId: this.data.roomId,
             userIdentifier
           });
-          wx.closeSocket();
-          // Reset room state
-          this.setData({ roomId: null, wsConnected: false });
 
-          // Switch back to Lobby
-          wx.switchTab({
-            url: '/pages/lobby/lobby'
-          });
+          // 延迟关闭和跳转，确保消息发送成功
+          setTimeout(() => {
+            wx.closeSocket();
+            // Reset room state
+            this.setData({ roomId: null, wsConnected: false });
+
+            // Switch back to Lobby
+            wx.switchTab({
+                url: '/pages/lobby/lobby'
+            });
+          }, 200);
         }
       }
     });

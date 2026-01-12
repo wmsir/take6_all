@@ -643,8 +643,15 @@ Page({
       
       // 延迟跳转，确保数据已保存
       setTimeout(() => {
-        wx.redirectTo({
-          url: `/pages/result/result?roomId=${this.data.roomId}&isGameOver=true`
+        // 由于 game 是 TabBar 页面，不能使用 redirectTo，改用 navigateTo
+        wx.navigateTo({
+          url: `/pages/result/result?roomId=${this.data.roomId}&isGameOver=true`,
+          fail: (err) => {
+             console.error('跳转结算页失败，尝试使用 reLaunch', err);
+             wx.reLaunch({
+                url: `/pages/result/result?roomId=${this.data.roomId}&isGameOver=true`
+             });
+          }
         });
       }, 300);
     } else if (roomState.gameState === 'ROUND_END') {
@@ -667,8 +674,15 @@ Page({
       wx.setStorageSync('gameResult', gameResult);
       
       setTimeout(() => {
-        wx.redirectTo({
-          url: `/pages/result/result?roomId=${this.data.roomId}&isGameOver=false`
+        // 由于 game 是 TabBar 页面，不能使用 redirectTo，改用 navigateTo
+        wx.navigateTo({
+          url: `/pages/result/result?roomId=${this.data.roomId}&isGameOver=false`,
+          fail: (err) => {
+             console.error('跳转结算页失败，尝试使用 reLaunch', err);
+             wx.reLaunch({
+                url: `/pages/result/result?roomId=${this.data.roomId}&isGameOver=false`
+             });
+          }
         });
       }, 300);
     }
@@ -893,8 +907,13 @@ Page({
       success: (res) => {
         if (res.confirm) {
           this.sendSocketMsg({ type: 'leaveRoom', roomId: this.data.roomId, userIdentifier });
-          wx.closeSocket();
-          wx.navigateBack();
+          // 延迟关闭连接和跳转，确保消息发送成功
+          setTimeout(() => {
+            wx.closeSocket();
+            wx.switchTab({
+                url: '/pages/lobby/lobby'
+            });
+          }, 200);
         }
       }
     });
