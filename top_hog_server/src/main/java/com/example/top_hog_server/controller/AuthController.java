@@ -1,6 +1,5 @@
 package com.example.top_hog_server.controller;
 
-
 import com.example.top_hog_server.exception.BusinessException;
 import com.example.top_hog_server.exception.ErrorCode;
 import com.example.top_hog_server.model.User;
@@ -91,7 +90,8 @@ public class AuthController {
      */
     @PostMapping("/bind/phone")
     public ApiResponse<Map<String, String>> bindPhone(@Valid @RequestBody BindPhoneRequest request) {
-        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication()
+                .getPrincipal();
         User user = userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "User not found"));
 
@@ -106,6 +106,7 @@ public class AuthController {
 
     /**
      * 用户登录接口。
+     * 
      * @param loginRequest 包含用户名和密码的登录请求体
      * @return 包含JWT令牌和用户信息的ApiResponse
      * @throws BusinessException 如果认证失败或发生其他业务错误
@@ -141,7 +142,8 @@ public class AuthController {
                     userDetails.getAvatarUrl(),
                     userDetails.getPhone(),
                     userDetails.getInviteCode(),
-                    userDetails.getVipStatus());
+                    userDetails.getVipStatus(),
+                    user.isGuideCompleted());
             logger.info("用户 {} 登录成功", loginRequest.getUsername());
             return ApiResponse.success(jwtResponse);
         } catch (BadCredentialsException e) {
@@ -157,6 +159,7 @@ public class AuthController {
 
     /**
      * 请求发送邮箱验证码接口。
+     * 
      * @param emailRequest 包含邮箱地址的请求体
      * @return 操作结果的ApiResponse，成功时data为提示信息
      * @throws BusinessException 如果邮箱已注册并验证，或邮件发送失败
@@ -167,7 +170,7 @@ public class AuthController {
         userRepository.findByEmail(emailRequest.getEmail()).ifPresent(user -> { // 使用了新增的findByEmail
             if (user.isEmailVerified()) {
                 logger.warn("邮箱 {} 已注册并验证，请求发送验证码被拒绝", emailRequest.getEmail());
-                throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS,"此邮箱已注册并验证。");
+                throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS, "此邮箱已注册并验证。");
             }
         });
 
@@ -185,6 +188,7 @@ public class AuthController {
 
     /**
      * 用户注册接口。
+     * 
      * @param signUpRequest 包含注册信息的请求体 (用户名、邮箱、密码、验证码)
      * @return 操作结果的ApiResponse，成功时data为提示信息
      * @throws BusinessException 如果验证码无效、用户名或邮箱已存在，或发生其他业务错误
@@ -193,18 +197,19 @@ public class AuthController {
     @ResponseStatus(HttpStatus.CREATED) // 成功创建用户时返回201状态码
     public ApiResponse<String> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         // 1. (已移除) 校验邮箱验证码 - 直接注册不需要验证码
-        // if (!verificationCodeService.verifyCode(signUpRequest.getEmail(), signUpRequest.getEmailVerificationCode())) { ... }
+        // if (!verificationCodeService.verifyCode(signUpRequest.getEmail(),
+        // signUpRequest.getEmailVerificationCode())) { ... }
 
         // 2. 检查用户名是否已存在
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
             logger.warn("用户注册失败: 用户名 {} 已被占用", signUpRequest.getUsername());
-            throw new BusinessException(ErrorCode.USERNAME_ALREADY_EXISTS,"用户名已被占用!");
+            throw new BusinessException(ErrorCode.USERNAME_ALREADY_EXISTS, "用户名已被占用!");
         }
 
         // 3. 检查邮箱是否已存在
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
             logger.warn("用户注册失败: 邮箱 {}已被使用", signUpRequest.getEmail());
-            throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS,"邮箱已被使用!");
+            throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS, "邮箱已被使用!");
         }
 
         // 4. 创建新用户账号
@@ -212,9 +217,9 @@ public class AuthController {
                 signUpRequest.getEmail(),
                 encoder.encode(signUpRequest.getPassword())); // 密码加密保存
         user.setNickname(signUpRequest.getUsername()); // 默认昵称为用户名
-        user.setInviteCode(generateInviteCode());      // 生成邀请码
-        user.setVipStatus(0);                          // 设置默认VIP状态
-        user.setEmailVerified(true);                   // 邮箱已通过验证码校验
+        user.setInviteCode(generateInviteCode()); // 生成邀请码
+        user.setVipStatus(0); // 设置默认VIP状态
+        user.setEmailVerified(true); // 邮箱已通过验证码校验
 
         userRepository.save(user);
         String successMessage = "用户 " + signUpRequest.getUsername() + " 注册成功!";
@@ -225,6 +230,7 @@ public class AuthController {
     /**
      * 用户登出接口。
      * 对于JWT，主要是客户端清除Token。服务端可选择清除SecurityContext。
+     * 
      * @return 操作结果的ApiResponse
      */
     @PostMapping("/signout")
@@ -237,6 +243,7 @@ public class AuthController {
 
     /**
      * 生成随机邀请码的私有辅助方法。
+     * 
      * @return 6位大写字母和数字组成的邀请码
      */
     private String generateInviteCode() {

@@ -11,10 +11,11 @@ public class JwtResponse {
     private String phone;
     private String inviteCode;
     private Integer vipStatus;
+    private boolean isGuideCompleted;
 
-    public JwtResponse(String accessToken, Long id, String username, String email, 
-                      String nickname, String avatarUrl, String phone, 
-                      String inviteCode, Integer vipStatus) {
+    public JwtResponse(String accessToken, Long id, String username, String email,
+            String nickname, String avatarUrl, String phone,
+            String inviteCode, Integer vipStatus, boolean isGuideCompleted) {
         this.token = accessToken;
         this.id = id;
         this.username = username;
@@ -24,6 +25,7 @@ public class JwtResponse {
         this.phone = phone;
         this.inviteCode = inviteCode;
         this.vipStatus = vipStatus;
+        this.isGuideCompleted = isGuideCompleted;
     }
 
     public String getAccessToken() {
@@ -65,7 +67,7 @@ public class JwtResponse {
     public void setUsername(String username) {
         this.username = username;
     }
-    
+
     public String getNickname() {
         return nickname;
     }
@@ -73,7 +75,7 @@ public class JwtResponse {
     public void setNickname(String nickname) {
         this.nickname = nickname;
     }
-    
+
     public String getAvatarUrl() {
         return avatarUrl;
     }
@@ -81,7 +83,7 @@ public class JwtResponse {
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
     }
-    
+
     public String getPhone() {
         return phone;
     }
@@ -89,7 +91,7 @@ public class JwtResponse {
     public void setPhone(String phone) {
         this.phone = phone;
     }
-    
+
     public String getInviteCode() {
         return inviteCode;
     }
@@ -97,12 +99,20 @@ public class JwtResponse {
     public void setInviteCode(String inviteCode) {
         this.inviteCode = inviteCode;
     }
-    
+
     public Integer getVipStatus() {
         return vipStatus;
     }
 
     public void setVipStatus(Integer vipStatus) {
         this.vipStatus = vipStatus;
+    }
+
+    public boolean isGuideCompleted() {
+        return isGuideCompleted;
+    }
+
+    public void setGuideCompleted(boolean guideCompleted) {
+        isGuideCompleted = guideCompleted;
     }
 }

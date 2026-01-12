@@ -108,4 +108,16 @@
   <view class="footer">
     <text class="tip-text">支持 <text class="tip-link">微信分享卡片</text> 邀请好友，点击即可直接进入对应房间。</text>
   </view>
+  <!-- 新手引导弹窗 -->
+  <view class="guide-mask" wx:if="{{showGuide}}">
+    <view class="guide-modal">
+      <view class="guide-title">欢迎加入 TAKE6!</view>
+      <view class="guide-content">
+        <view class="guide-text">这是一场充满策略与运气的较量。</view>
+        <view class="guide-text">规则简单：出牌比大小，谁收牌谁扣分。</view>
+        <view class="guide-text">目标：尽量不要收到牛头（扣分）！</view>
+      </view>
+      <button class="guide-btn" bindtap="handleFinishGuide">明白了，领取奖励</button>
+    </view>
+  </view>
 </view>

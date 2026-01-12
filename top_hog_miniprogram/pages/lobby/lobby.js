@@ -2,12 +2,14 @@
  * 大厅页面
  */
 const roomApi = require('../../api/roomApi.js');
+const commercialApi = require('../../api/commercialApi.js');
 const app = getApp();
 
 Page({
   data: {
     userInfo: null,
     totalScore: 0,
+    showGuide: false,
     roomCode: '',
     roomList: [],
     loading: false
@@ -32,6 +34,14 @@ Page({
     }
 
     this.setData({ userInfo });
+
+    // 检查新手引导
+    // 注意: 旧缓存可能没有 isGuideCompleted 字段，这里默认为 true 防止打扰老用户，或者 false 强制引导
+    // 这里假设后端返回的 userInfo 包含该字段，若为 false 则显示
+    if (userInfo && userInfo.isGuideCompleted === false) {
+      this.setData({ showGuide: true });
+    }
+
     // Note: loadRoomList() removed from onLoad to avoid duplicate call with onShow
   },
 
@@ -171,7 +181,7 @@ Page({
       .catch((error) => {
         wx.hideLoading();
         console.error('快速匹配失败:', error);
-        
+
         // 如果没有可用房间，提示用户
         wx.showModal({
           title: '匹配失败',
@@ -241,8 +251,8 @@ Page({
     app.globalData.spectatingRoomId = roomId;
 
     setTimeout(() => {
-       // Assuming game page is also a tabbar page based on app.json
-       wx.switchTab({
+      // Assuming game page is also a tabbar page based on app.json
+      wx.switchTab({
         url: '/pages/game/game'
       });
     }, 500);
@@ -308,5 +318,40 @@ Page({
    */
   handleRefresh() {
     this.loadRoomList();
+  },
+
+  /**
+   * 完成新手引导
+   */
+  handleFinishGuide() {
+    wx.showLoading({ title: '领取奖励中...' });
+
+    commercialApi.finishGuide()
+      .then((res) => {
+        wx.hideLoading();
+        this.setData({ showGuide: false });
+
+        // 更新本地用户信息状态
+        const userInfo = this.data.userInfo;
+        if (userInfo) {
+          userInfo.isGuideCompleted = true;
+          this.setData({ userInfo });
+          app.globalData.userInfo = userInfo;
+          wx.setStorageSync('userInfo', userInfo);
+        }
+
+        if (res.rewarded) {
+          wx.showToast({
+            title: `完成引导 +${res.rewardCoins}金币`,
+            icon: 'none',
+            duration: 2000
+          });
+        }
+      })
+      .catch((err) => {
+        wx.hideLoading();
+        console.error(err);
+        this.setData({ showGuide: false }); // 出错也关闭
+      });
   }
 });

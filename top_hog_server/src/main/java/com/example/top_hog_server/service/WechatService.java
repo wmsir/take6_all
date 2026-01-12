@@ -84,7 +84,7 @@ public class WechatService {
             } else {
                 // B. 新用户：注册
                 user = new User();
-                user.setWechatOpenid(openid);        // 设置 OpenID
+                user.setWechatOpenid(openid); // 设置 OpenID
                 user.setWechatSessionKey(sessionKey); // 设置 SessionKey
                 // 设置默认昵称 (截取 OpenID 后4位作为标识)
                 String suffix = openid.length() > 4 ? openid.substring(openid.length() - 4) : "User";
@@ -101,8 +101,8 @@ public class WechatService {
             // ==========================================
             UserDetailsImpl userDetails = UserDetailsImpl.build(user);
 
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails,
+                    null, userDetails.getAuthorities());
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
             // 使用 generateMiniAppToken 生成包含更多信息的 Token
@@ -121,9 +121,9 @@ public class WechatService {
                     user.getNickname(),
                     user.getAvatarUrl(), // 可能为 null，前端需处理
                     jwt,
-                    user.getPhone(),     // 可能为 null
-                    registerTime
-            );
+                    user.getPhone(), // 可能为 null
+                    registerTime,
+                    user.isGuideCompleted());
 
         } catch (Exception e) {
             logger.error("登录处理异常", e);

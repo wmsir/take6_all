@@ -12,4 +12,5 @@ public class WechatLoginResponse {
     private String token;
     private String phone;
     private Long registerTime;
+    private boolean isGuideCompleted;
 }

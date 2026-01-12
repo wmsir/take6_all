@@ -77,6 +77,13 @@ public class User {
     @Column(name = "vip_expire_time")
     private java.time.LocalDateTime vipExpireTime;
 
+    @Column(name = "is_guide_completed")
+    private Boolean isGuideCompleted = false;
+
+    public boolean isGuideCompleted() {
+        return Boolean.TRUE.equals(isGuideCompleted);
+    }
+
     public Long getRegisterTime() {
         return createdAt != null ? createdAt.getTime() : null;
     }
