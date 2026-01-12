@@ -318,7 +318,11 @@ const sendChat = () => {
 
 // Actions exposed to child via event or just child calling props.wsSend directly
 const onLeaveRoom = () => {
-    if (confirm("确定要离开房间吗？")) {
+    const me = Object.values(players.value).find(p => p.sessionId === mySessionId.value);
+    const isHost = me && me.isHost;
+    const msg = isHost ? "你是房主，离开将导致房间销毁。确定要离开吗？" : "确定要离开房间吗？";
+
+    if (confirm(msg)) {
         send({ type: 'leaveRoom', roomId: roomId.value });
     }
 };
