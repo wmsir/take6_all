@@ -16,14 +16,75 @@
     <audio ref="bgmAudio" loop src="/background.mp3"></audio>
     <audio ref="sfxAudio" src="/placeholder.mp3"></audio>
 
-    <!-- Victory Overlay -->
+    <!-- Game Over Results Overlay -->
     <Transition name="fade">
-        <div v-if="showVictoryOverlay" class="victory-overlay">
-            <div class="victory-card">
-                <div class="victory-icon">🏆</div>
-                <h2>游戏结束</h2>
-                <p class="victory-text">{{ victoryMessage }}</p>
-                <button class="btn btn-primary btn-large" @click="closeVictoryOverlay">关闭</button>
+        <div v-if="showVictoryOverlay" class="victory-overlay" @click.self="closeVictoryOverlay">
+            <div class="results-card">
+                <!-- Header -->
+                <div class="results-header">
+                    <div class="results-icon">🏆</div>
+                    <h2>游戏结束</h2>
+                    <p class="results-subtitle">{{ victoryMessage }}</p>
+                </div>
+
+                <!-- Rankings Table -->
+                <div class="rankings-section">
+                    <h3>📊 战绩排名</h3>
+                    <div class="rankings-table">
+                        <div 
+                            v-for="(player, index) in rankedPlayers" 
+                            :key="player.sessionId"
+                            class="ranking-row"
+                            :class="{ 
+                                'rank-1': index === 0, 
+                                'rank-2': index === 1, 
+                                'rank-3': index === 2,
+                                'is-me': isMe(player)
+                            }"
+                        >
+                            <div class="rank-badge">
+                                <span v-if="index === 0" class="medal">🥇</span>
+                                <span v-else-if="index === 1" class="medal">🥈</span>
+                                <span v-else-if="index === 2" class="medal">🥉</span>
+                                <span v-else class="rank-number">#{{ index + 1 }}</span>
+                            </div>
+                            <div class="player-info">
+                                <div class="player-name-row">
+                                    <span class="player-name">
+                                        <span v-if="player.isHost">👑</span>
+                                        {{ player.displayName }}
+                                    </span>
+                                    <span v-if="isMe(player)" class="you-badge">你</span>
+                                </div>
+                                <div class="player-stats">
+                                    <span v-if="player.isBot" class="bot-badge">🤖 机器人</span>
+                                    <span v-if="player.isTrustee" class="trustee-badge">托管</span>
+                                </div>
+                            </div>
+                            <div class="player-score">
+                                <span class="score-value">{{ player.score || 0 }}</span>
+                                <span class="score-label">分</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="results-actions">
+                    <button class="btn btn-secondary" @click="closeVictoryOverlay">
+                        关闭
+                    </button>
+                    <button 
+                        v-if="gameState === 'GAME_OVER'" 
+                        class="btn btn-success" 
+                        @click="requestNewGame"
+                    >
+                        🎮 再来一局
+                    </button>
+                    <button class="btn btn-primary" @click="returnToLobby">
+                        返回大厅
+                    </button>
+                </div>
             </div>
         </div>
     </Transition>
@@ -162,6 +223,15 @@ const playerList = computed(() => Object.values(players.value));
 const playerCount = computed(() => playerList.value.length);
 const maxPlayers = computed(() => roomInfo.maxPlayers || 10);
 
+// Ranked players sorted by score (ascending for this game - lower is better)
+const rankedPlayers = computed(() => {
+    return [...playerList.value].sort((a, b) => {
+        const scoreA = a.score || 0;
+        const scoreB = b.score || 0;
+        return scoreA - scoreB; // Lower score wins in this game
+    });
+});
+
 const currentGameComponent = computed(() => {
     // Should map roomInfo.gameType to component
     // Default to TopHogBoard
@@ -275,31 +345,63 @@ const handleMessage = (data) => {
 };
 
 const updateGameState = (state) => {
+    console.log('=== updateGameState 被调用 ===', {
+        currentState: gameState.value,
+        newState: state.gameState,
+        message: state.message
+    });
+    
     roomState.value = state; // Update full state for child
     roomInfo.roomName = state.roomName;
     roomInfo.maxPlayers = state.maxPlayers;
     roomInfo.gameType = state.gameType || 'top_hog';
     
+    // 检查状态变化(在更新gameState之前)
+    const previousState = gameState.value;
+    const isNowGameOver = state.gameState === 'GAME_OVER';
+    const isRoundOver = state.gameState === 'ROUND_OVER';
+    
+    console.log('状态检查:', {
+        previousState,
+        isNowGameOver,
+        isRoundOver,
+        shouldShow: isNowGameOver || isRoundOver
+    });
+    
+    // 更新游戏状态
     gameState.value = state.gameState;
     players.value = state.players || {};
 
-    if (gameState.value === 'GAME_OVER' && state.gameState !== 'GAME_OVER') {
+    // 如果状态发生变化,重置战绩确认标记
+    if (previousState !== state.gameState) {
         victoryOverlayManuallyClosed.value = false;
         sessionStorage.removeItem(`victory_ack_${roomId.value}`);
+        console.log('状态已变化,重置确认标记');
     }
 
-    if (state.gameState === 'GAME_OVER') {
+    // 如果游戏结束或一轮结束,显示战绩面板
+    if (isNowGameOver || isRoundOver) {
          const winnerName = state.winnerDisplayName || "某人";
-         const msg = state.message || "游戏结束";
-         victoryMessage.value = msg.includes("获胜") ? msg : `游戏结束! ${winnerName} 获胜!`;
-         const isAck = sessionStorage.getItem(`victory_ack_${roomId.value}`);
-         if (!victoryOverlayManuallyClosed.value && !isAck) {
-             showVictoryOverlay.value = true;
+         const msg = state.message || (isNowGameOver ? "游戏结束" : "本轮结束");
+         
+         if (isNowGameOver) {
+             victoryMessage.value = msg.includes("获胜") ? msg : `游戏结束! ${winnerName} 获胜!`;
          } else {
-             showVictoryOverlay.value = false;
+             victoryMessage.value = msg;
          }
+         
+         // 每次状态变化时都显示战绩面板
+         showVictoryOverlay.value = true;
+         
+         console.log('✅ 显示战绩面板:', {
+             state: state.gameState,
+             message: victoryMessage.value,
+             playersCount: Object.keys(players.value).length,
+             showVictoryOverlay: showVictoryOverlay.value
+         });
     } else {
         showVictoryOverlay.value = false;
+        console.log('❌ 隐藏战绩面板 (状态不是ROUND_OVER或GAME_OVER)');
     }
 };
 
@@ -342,6 +444,21 @@ const closeVictoryOverlay = () => {
     sessionStorage.setItem(`victory_ack_${roomId.value}`, 'true');
 };
 
+const returnToLobby = () => {
+    if (ws.value) {
+        send({ type: 'leaveRoom', roomId: roomId.value });
+    }
+    router.push('/lobby');
+};
+
+const requestNewGame = () => {
+    if (ws.value) {
+        send({ type: 'requestNewGame', roomId: roomId.value });
+        closeVictoryOverlay();
+        addLog('已请求再来一局');
+    }
+};
+
 // Utils for sidebar
 const isMe = (player) => {
     return (player.sessionId === mySessionId.value);
@@ -351,6 +468,14 @@ const getStatusClass = (player) => {
     if (player.isTrustee) return 'status-trustee';
     if (gameState.value === 'WAITING') return player.isReady ? 'status-ready' : 'status-not-ready';
     if (gameState.value === 'GAME_OVER') return player.requestedNewGame ? 'status-again' : 'status-ended';
+    
+    // 游戏进行中,检查是否已出牌
+    if (gameState.value === 'PLAYING' || gameState.value === 'PROCESSING_TURN') {
+        const hasPlayed = roomState.value.playedCardsThisTurn && 
+                         roomState.value.playedCardsThisTurn[player.sessionId];
+        return hasPlayed ? 'status-played' : 'status-playing';
+    }
+    
     return '';
 };
 
@@ -358,7 +483,15 @@ const getStatusText = (player) => {
     if (player.isTrustee) return '托管中';
     if (gameState.value === 'WAITING') return player.isReady ? '已准备' : '未准备';
     if (gameState.value === 'GAME_OVER') return player.requestedNewGame ? '想再来' : '结束';
-    return '游戏';
+    
+    // 游戏进行中,显示出牌状态
+    if (gameState.value === 'PLAYING' || gameState.value === 'PROCESSING_TURN') {
+        const hasPlayed = roomState.value.playedCardsThisTurn && 
+                         roomState.value.playedCardsThisTurn[player.sessionId];
+        return hasPlayed ? '已出牌' : '出牌中';
+    }
+    
+    return '游戏中';
 };
 
 onMounted(() => {
@@ -657,6 +790,10 @@ watch(
 .status-ready { background-color: #d1fae5; color: #065f46; }
 .status-not-ready { background-color: #fee2e2; color: #991b1b; }
 .status-trustee { background-color: #f3e8ff; color: #6b21a8; }
+.status-playing { background-color: #fef3c7; color: #d97706; font-weight: 600; }
+.status-played { background-color: #d1fae5; color: #065f46; font-weight: 600; }
+.status-again { background-color: #dbeafe; color: #1e40af; }
+.status-ended { background-color: #e5e7eb; color: #6b7280; }
 
 /* Chat */
 .chat-window {
@@ -708,16 +845,273 @@ watch(
 .card-badge { font-weight: bold; color: #c2410c; }
 .timer-text { color: #c2410c; font-weight: bold; margin-top: 5px; }
 
-/* Victory */
+/* Game Over Results */
 .victory-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100;
-    display: flex; align-items: center; justify-content: center;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
 }
-.victory-card {
-    background: white; padding: 40px; border-radius: 20px; text-align: center; max-width: 500px; width: 90%;
+
+.results-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 3px;
+    border-radius: 24px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.4s ease;
 }
-.victory-icon { font-size: 4rem; margin-bottom: 20px; }
-.victory-text { font-size: 1.5rem; margin-bottom: 30px; }
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.results-card > * {
+    background: white;
+    border-radius: 22px;
+}
+
+/* Results Header */
+.results-header {
+    text-align: center;
+    padding: 2rem 2rem 1.5rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 22px 22px 0 0;
+}
+
+.results-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    animation: bounce 0.6s ease;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+.results-header h2 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+    color: #111827;
+}
+
+.results-subtitle {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #6b7280;
+}
+
+/* Rankings Section */
+.rankings-section {
+    padding: 1.5rem 2rem;
+}
+
+.rankings-section h3 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.3rem;
+    color: #111827;
+    text-align: center;
+}
+
+.rankings-table {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* Ranking Row */
+.ranking-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    animation: fadeInRow 0.4s ease backwards;
+}
+
+.ranking-row:nth-child(1) { animation-delay: 0.1s; }
+.ranking-row:nth-child(2) { animation-delay: 0.15s; }
+.ranking-row:nth-child(3) { animation-delay: 0.2s; }
+.ranking-row:nth-child(4) { animation-delay: 0.25s; }
+.ranking-row:nth-child(5) { animation-delay: 0.3s; }
+
+@keyframes fadeInRow {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.ranking-row.rank-1 {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-color: #fbbf24;
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}
+
+.ranking-row.rank-2 {
+    background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+    border-color: #9ca3af;
+}
+
+.ranking-row.rank-3 {
+    background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+    border-color: #fb923c;
+}
+
+.ranking-row.is-me {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}
+
+/* Rank Badge */
+.rank-badge {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.medal {
+    font-size: 2.5rem;
+    animation: rotate 0.6s ease;
+}
+
+@keyframes rotate {
+    from { transform: rotate(-180deg) scale(0); }
+    to { transform: rotate(0) scale(1); }
+}
+
+.rank-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #6b7280;
+}
+
+/* Player Info */
+.player-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.player-name-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.player-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.you-badge {
+    background: #4f46e5;
+    color: white;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.player-stats {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.bot-badge,
+.trustee-badge {
+    font-size: 0.75rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.bot-badge {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.trustee-badge {
+    background: #f3e8ff;
+    color: #6b21a8;
+}
+
+/* Player Score */
+.player-score {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+}
+
+.score-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1;
+}
+
+.score-label {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+}
+
+/* Results Actions */
+.results-actions {
+    display: flex;
+    gap: 1rem;
+    padding: 1.5rem 2rem 2rem;
+    justify-content: center;
+}
+
+.results-actions .btn {
+    flex: 1;
+    max-width: 200px;
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+}
+
+/* Fade Transition */
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
 
 /* Responsive */
 @media (max-width: 900px) {

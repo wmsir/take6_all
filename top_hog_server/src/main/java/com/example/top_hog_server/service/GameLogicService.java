@@ -53,12 +53,12 @@ public class GameLogicService {
     // @Lazy确保在循环依赖时能正确加载
     @Autowired
     public GameLogicService(GameRoomService gameRoomService,
-                            UserRepository userRepository,
-                            GameHistoryRepository gameHistoryRepository,
-                            @Lazy GameWebSocketHandler gameWebSocketHandler,
-                            TaskScheduler taskScheduler,
-                            BotProfileService botProfileService,
-                            GameEngineFactory gameEngineFactory) {
+            UserRepository userRepository,
+            GameHistoryRepository gameHistoryRepository,
+            @Lazy GameWebSocketHandler gameWebSocketHandler,
+            TaskScheduler taskScheduler,
+            BotProfileService botProfileService,
+            GameEngineFactory gameEngineFactory) {
         this.gameRoomService = gameRoomService;
         this.userRepository = userRepository;
         this.gameHistoryRepository = gameHistoryRepository;
@@ -142,15 +142,34 @@ public class GameLogicService {
             // 使用 GameRoomDTO 过滤数据
             String userIdStr = p.getUserId() != null ? String.valueOf(p.getUserId()) : null;
 
-            com.example.top_hog_server.payload.dto.response.GameRoomDTO dto = com.example.top_hog_server.payload.dto.response.GameRoomDTO.from(room, userIdStr);
+            com.example.top_hog_server.payload.dto.response.GameRoomDTO dto = com.example.top_hog_server.payload.dto.response.GameRoomDTO
+                    .from(room, userIdStr);
             payload.put("roomState", dto);
 
             WebSocketSession session = gameWebSocketHandler.getSessionById(sessionId);
             try {
                 gameWebSocketHandler.sendMessageToSession(session, payload);
             } catch (IOException e) {
-                 logger.error("Error sending state to session {}", sessionId, e);
+                logger.error("Error sending state to session {}", sessionId, e);
             }
+        }
+
+        // 异步触发托管玩家自动出牌
+        // 当游戏状态为PLAYING时,检查是否有托管玩家需要自动出牌
+        if (room.getGameState() == GameState.PLAYING) {
+            // 使用异步任务避免阻塞当前线程
+            taskScheduler.schedule(() -> {
+                Lock roomLock = getRoomLock(roomId);
+                roomLock.lock();
+                try {
+                    GameRoom currentRoom = gameRoomService.getRoom(roomId);
+                    if (currentRoom != null && currentRoom.getGameState() == GameState.PLAYING) {
+                        processBotTurnsAndCheckTurnCompletion(currentRoom);
+                    }
+                } finally {
+                    roomLock.unlock();
+                }
+            }, java.time.Instant.now().plusMillis(500)); // 延迟500ms执行,避免重复触发
         }
     }
 
@@ -230,7 +249,6 @@ public class GameLogicService {
                 return;
             }
 
-
             boolean allReadyForNewGame;
             // 如果是从“游戏结束”状态开始新游戏
             if (room.getGameState() == GameState.GAME_OVER) {
@@ -259,10 +277,10 @@ public class GameLogicService {
             // 重置房间状态以开始新游戏（分数等）
             // 获取对应的游戏引擎
             GameEngine engine = gameEngineFactory.getEngine(room.getGameType());
-            
+
             // 调用引擎初始化游戏（发牌、洗牌、初始牌列等）
             engine.initializeGame(room);
-            
+
             // 初始化手牌（引擎可能在initializeGame里做了，也可能分开，这里假设TopHogEngine的initializeGame只负责公共区域）
             // 修正：TopHogGameEngine.startNewRound 负责发手牌。
             engine.startNewRound(room);
@@ -291,21 +309,21 @@ public class GameLogicService {
         for (Player player : room.getPlayers().values()) {
             player.resetForNewRound();
         }
-        
+
         GameEngine engine = gameEngineFactory.getEngine(room.getGameType());
         engine.startNewRound(room);
-        
+
         // 检查是否 startNewRound 内部因为牌不够而设置了 GAME_OVER
         if (room.getGameState() == GameState.GAME_OVER) {
-             Player winner = determineWinner(room);
-             String gameOverMsg = "无法开始新一轮（可能牌不足），游戏结束。";
-             if (winner != null) {
-                 gameOverMsg += " 赢家: " + winner.getDisplayName();
-                 room.setWinnerDisplayName(winner.getDisplayName());
-             }
-             broadcastGameState(room.getRoomId(), gameOverMsg, room);
-             saveGameHistory(room);
-             return;
+            Player winner = determineWinner(room);
+            String gameOverMsg = "无法开始新一轮（可能牌不足），游戏结束。";
+            if (winner != null) {
+                gameOverMsg += " 赢家: " + winner.getDisplayName();
+                room.setWinnerDisplayName(winner.getDisplayName());
+            }
+            broadcastGameState(room.getRoomId(), gameOverMsg, room);
+            saveGameHistory(room);
+            return;
         }
 
         logger.info("房间 {} 新一轮准备就绪。", room.getRoomId());
@@ -416,7 +434,9 @@ public class GameLogicService {
         roomLock.lock();
         try {
             Player leavingPlayer = room.getPlayers().get(webSocketSessionId);
-            String logPlayerName = (leavingPlayer != null && leavingPlayer.getDisplayName() != null) ? leavingPlayer.getDisplayName() : String.valueOf(userId);
+            String logPlayerName = (leavingPlayer != null && leavingPlayer.getDisplayName() != null)
+                    ? leavingPlayer.getDisplayName()
+                    : String.valueOf(userId);
 
             if (leavingPlayer != null) {
                 // 如果玩家已经标记为 pendingLeave，说明是明确请求离开，已经被 API 处理过移除，或者在此处移除
@@ -447,7 +467,8 @@ public class GameLogicService {
                     // 鉴于用户反馈 "If 1 player other are bots, player leaves room need destroy"，
                     // 这里我们尝试执行移除逻辑。
                     // 但是直接移除会导致刷新页面的用户无法重连。
-                    // 我们可以设置一个较短的超时任务来销毁，或者依赖 togglePlayerAutoPlay / checkAndRejoinPlayerOnConnectRaw 来处理。
+                    // 我们可以设置一个较短的超时任务来销毁，或者依赖 togglePlayerAutoPlay /
+                    // checkAndRejoinPlayerOnConnectRaw 来处理。
                     // 但为了满足用户 "离开房间需要销毁" 的强硬需求（假设用户关闭了标签页），
                     // 我们在这里执行带延迟的销毁检查，或者直接销毁。
                     // 考虑到刷新页面通常几秒钟，我们延迟10秒销毁。
@@ -477,16 +498,17 @@ public class GameLogicService {
     public void playerPlaysCard(String roomId, String sessionId, Long userIdentifier, int cardNumber) {
         GameRoom room = gameRoomService.getRoom(roomId);
         if (room == null) {
-             // 如果通过 HTTP 调用，我们无法轻松发送 WS 错误。 记录下来。
-             logger.error("Room not found: " + roomId);
-             return;
+            // 如果通过 HTTP 调用，我们无法轻松发送 WS 错误。 记录下来。
+            logger.error("Room not found: " + roomId);
+            return;
         }
         WebSocketSession session = gameWebSocketHandler.getSessionById(sessionId);
         playerPlaysCardRaw(roomId, session, userIdentifier, cardNumber);
     }
 
     // 处理玩家出牌的原始请求
-    public void playerPlaysCardRaw(String roomId, WebSocketSession webSocketSession, Long userIdentifier, int cardNumber) {
+    public void playerPlaysCardRaw(String roomId, WebSocketSession webSocketSession, Long userIdentifier,
+            int cardNumber) {
         GameRoom room = gameRoomService.getRoom(roomId);
         if (room == null) {
             sendErrorToUserSession(webSocketSession, roomId, "房间未找到。");
@@ -498,11 +520,11 @@ public class GameLogicService {
         try {
             String sessionId = webSocketSession != null ? webSocketSession.getId() : null;
             if (sessionId == null) {
-                 // 尝试在内部调用时查找会话，如果会话为 null，但我们需要识别玩家
-                 // 但是，调用者 playerPlaysCard 传递了 session。
-                 // 如果 session 为 null（例如用户离线但 HTTP 被调用？不太可能），我们无法轻松继续。
-                 logger.error("Session is null for playCard");
-                 return;
+                // 尝试在内部调用时查找会话，如果会话为 null，但我们需要识别玩家
+                // 但是，调用者 playerPlaysCard 传递了 session。
+                // 如果 session 为 null（例如用户离线但 HTTP 被调用？不太可能），我们无法轻松继续。
+                logger.error("Session is null for playCard");
+                return;
             }
             Player player = room.getPlayers().get(sessionId);
             if (player == null) {
@@ -523,7 +545,8 @@ public class GameLogicService {
             }
 
             // 检查玩家手牌中是否有这张牌
-            Optional<Card> cardToPlayOpt = player.getHand().stream().filter(c -> c.getNumber() == cardNumber).findFirst();
+            Optional<Card> cardToPlayOpt = player.getHand().stream().filter(c -> c.getNumber() == cardNumber)
+                    .findFirst();
             if (!cardToPlayOpt.isPresent()) {
                 sendErrorToUserSession(webSocketSession, roomId, "卡牌 " + cardNumber + " 不在您的手牌中。");
                 return;
@@ -535,8 +558,10 @@ public class GameLogicService {
             // 从手牌中移除
             player.removeCardFromHand(cardToPlay);
             // 如果是AI可见模式，也更新AI手牌记录
-            if (room.getAllPlayerHandsForAI() != null && room.getAllPlayerHandsForAI().containsKey(player.getSessionId())) {
-                room.getAllPlayerHandsForAI().get(player.getSessionId()).removeIf(c -> c.getNumber() == cardToPlay.getNumber());
+            if (room.getAllPlayerHandsForAI() != null
+                    && room.getAllPlayerHandsForAI().containsKey(player.getSessionId())) {
+                room.getAllPlayerHandsForAI().get(player.getSessionId())
+                        .removeIf(c -> c.getNumber() == cardToPlay.getNumber());
             }
 
             broadcastGameState(roomId, player.getDisplayName() + " 已出牌。", room);
@@ -551,13 +576,16 @@ public class GameLogicService {
     // 尝试为托管/机器人玩家出牌，并检查本回合是否已准备好进行处理（即所有人都已出牌）
     private void processBotTurnsAndCheckTurnCompletion(GameRoom room) {
         // 防止重复处理或在不当状态下处理
-        if (room.getGameState() == GameState.PROCESSING_TURN || room.getGameState() == GameState.WAITING_FOR_PLAYER_CHOICE) {
-            logger.debug("房间 {} 状态为 {}，跳过 processBotTurnsAndCheckTurnCompletion。", room.getRoomId(), room.getGameState());
+        if (room.getGameState() == GameState.PROCESSING_TURN
+                || room.getGameState() == GameState.WAITING_FOR_PLAYER_CHOICE) {
+            logger.debug("房间 {} 状态为 {}，跳过 processBotTurnsAndCheckTurnCompletion。", room.getRoomId(),
+                    room.getGameState());
             return;
         }
         // 游戏应该处于 PLAYING 状态
         if (room.getGameState() != GameState.PLAYING) {
-            logger.debug("房间 {} 状态为 {} (非PLAYING)，跳过 processBotTurnsAndCheckTurnCompletion。", room.getRoomId(), room.getGameState());
+            logger.debug("房间 {} 状态为 {} (非PLAYING)，跳过 processBotTurnsAndCheckTurnCompletion。", room.getRoomId(),
+                    room.getGameState());
             return;
         }
 
@@ -656,7 +684,7 @@ public class GameLogicService {
                 final String originalName = profile.getName();
                 String botName = originalName;
                 if (room.getPlayers().values().stream().anyMatch(p -> p.getDisplayName().equals(originalName))) {
-                     botName = botName + "_" + (i+1);
+                    botName = botName + "_" + (i + 1);
                 }
 
                 String botSessionId = "BOT_" + roomId + "_" + UUID.randomUUID().toString().substring(0, 8);
@@ -699,20 +727,23 @@ public class GameLogicService {
             // 目前只重构了 TopHog，强转调用
             cardToPlay = ((TopHogGameEngine) engine).determineBotPlayCard(trusteePlayer, room);
         } else {
-             // 默认策略
-             cardToPlay = trusteePlayer.getHand().stream()
-                .min(Comparator.comparingInt(Card::getNumber))
-                .orElse(null);
+            // 默认策略
+            cardToPlay = trusteePlayer.getHand().stream()
+                    .min(Comparator.comparingInt(Card::getNumber))
+                    .orElse(null);
         }
 
         if (cardToPlay != null) {
             room.getPlayedCardsThisTurn().put(trusteePlayer.getSessionId(), cardToPlay);
             trusteePlayer.removeCardFromHand(cardToPlay);
-            if (room.getAllPlayerHandsForAI() != null && room.getAllPlayerHandsForAI().containsKey(trusteePlayer.getSessionId())) {
+            if (room.getAllPlayerHandsForAI() != null
+                    && room.getAllPlayerHandsForAI().containsKey(trusteePlayer.getSessionId())) {
                 final Card finalCardToPlay = cardToPlay;
-                room.getAllPlayerHandsForAI().get(trusteePlayer.getSessionId()).removeIf(c -> c.getNumber() == finalCardToPlay.getNumber());
+                room.getAllPlayerHandsForAI().get(trusteePlayer.getSessionId())
+                        .removeIf(c -> c.getNumber() == finalCardToPlay.getNumber());
             }
-            logger.info("托管玩家 {} 在房间 {} 自动打出牌: {}", trusteePlayer.getDisplayName(), room.getRoomId(), cardToPlay.getNumber());
+            logger.info("托管玩家 {} 在房间 {} 自动打出牌: {}", trusteePlayer.getDisplayName(), room.getRoomId(),
+                    cardToPlay.getNumber());
         } else {
             logger.error("托管玩家 {} 在房间 {} 无法选择出牌（手牌可能意外为空）。", trusteePlayer.getDisplayName(), room.getRoomId());
         }
@@ -721,8 +752,14 @@ public class GameLogicService {
     // 内部方法：处理一回合中所有玩家打出的牌
     private void processTurnInternal(GameRoom room) {
         // 各种边界条件检查
-        if (room.getGameState() == GameState.GAME_OVER) { logger.info("processTurnInternal: 房间 {} 游戏已结束。", room.getRoomId()); return; }
-        if (room.getPlayers().isEmpty()){ logger.info("processTurnInternal: 房间 {} 已空。", room.getRoomId()); return; }
+        if (room.getGameState() == GameState.GAME_OVER) {
+            logger.info("processTurnInternal: 房间 {} 游戏已结束。", room.getRoomId());
+            return;
+        }
+        if (room.getPlayers().isEmpty()) {
+            logger.info("processTurnInternal: 房间 {} 已空。", room.getRoomId());
+            return;
+        }
         if (room.getGameState() == GameState.WAITING_FOR_PLAYER_CHOICE) {
             logger.info("processTurnInternal: 房间 {} 正在等待玩家 {} 选择。跳过正常回合处理。",
                     room.getRoomId(), room.getPlayerChoosingRowSessionId());
@@ -730,8 +767,10 @@ public class GameLogicService {
         }
         // 状态检查
         if (room.getGameState() != GameState.PLAYING && room.getGameState() != GameState.PROCESSING_TURN) {
-            if(room.getPlayedCardsThisTurn().isEmpty() && (room.getGameState() == GameState.ROUND_OVER || room.getGameState() == GameState.WAITING)){
-                logger.info("processTurnInternal: 房间 {} 回合已结束或等待中，且无人出牌。跳过处理。", room.getRoomId()); return;
+            if (room.getPlayedCardsThisTurn().isEmpty()
+                    && (room.getGameState() == GameState.ROUND_OVER || room.getGameState() == GameState.WAITING)) {
+                logger.info("processTurnInternal: 房间 {} 回合已结束或等待中，且无人出牌。跳过处理。", room.getRoomId());
+                return;
             }
             logger.warn("processTurnInternal 为房间 {} 调用时状态异常: {}，但尝试继续处理。", room.getRoomId(), room.getGameState());
         }
@@ -743,13 +782,14 @@ public class GameLogicService {
                 .sorted(Map.Entry.comparingByValue(Comparator.comparingInt(Card::getNumber)))
                 .collect(Collectors.toList());
 
-        if (sortedPlayedCards.isEmpty() && !room.getPlayers().isEmpty() && room.getGameState() != GameState.ROUND_OVER){
+        if (sortedPlayedCards.isEmpty() && !room.getPlayers().isEmpty()
+                && room.getGameState() != GameState.ROUND_OVER) {
             logger.warn("房间 {} 在处理回合时发现没有玩家出牌，但房间内有玩家。恢复到PLAYING。", room.getRoomId());
             room.setGameState(GameState.PLAYING);
             broadcastGameState(room.getRoomId(), "回合处理异常，请重新出牌。", room);
             return;
         }
-        if(sortedPlayedCards.isEmpty()) {
+        if (sortedPlayedCards.isEmpty()) {
             logger.info("房间 {} 没有牌需要处理（可能所有玩家已离开），结束回合。", room.getRoomId());
             finalizeTurn(room);
             return;
@@ -798,23 +838,25 @@ public class GameLogicService {
                 return;
             }
 
-            String playerDisplayNameForLog = currentPlayer.getDisplayName() + (currentPlayer.isTrustee() ? " (托管)" : "");
+            String playerDisplayNameForLog = currentPlayer.getDisplayName()
+                    + (currentPlayer.isTrustee() ? " (托管)" : "");
             logger.info("房间 {} - 处理玩家 {} 的牌 {}", room.getRoomId(), playerDisplayNameForLog, playedCard.getNumber());
 
             // 寻找这张牌应该放置到哪个牌列
             // 委托给 Engine
             GameEngine engine = gameEngineFactory.getEngine(room.getGameType());
             int targetRowIndex = -1;
-            
+
             if (engine instanceof TopHogGameEngine) {
                 targetRowIndex = ((TopHogGameEngine) engine).findTargetRowIndex(room, playedCard);
             }
-            
+
             boolean cardCanBePlacedNormally = (targetRowIndex != -1);
 
             // 如果不能正常放置（即打出的牌比所有牌列的最后一张牌都小）
             if (!cardCanBePlacedNormally) {
-                logger.info("玩家 {} 的牌 {} 小于房间 {} 所有牌列的末尾牌。玩家必须选择一行。", playerDisplayNameForLog, playedCard.getNumber(), room.getRoomId());
+                logger.info("玩家 {} 的牌 {} 小于房间 {} 所有牌列的末尾牌。玩家必须选择一行。", playerDisplayNameForLog, playedCard.getNumber(),
+                        room.getRoomId());
 
                 // 游戏状态变为等待玩家选择
                 room.setGameState(GameState.WAITING_FOR_PLAYER_CHOICE);
@@ -839,7 +881,9 @@ public class GameLogicService {
                 choicePromptPayload.put("type", "needSelectRow");
 
                 Map<String, Object> dataPayload = new HashMap<>();
-                dataPayload.put("playerId", currentPlayer.getUserId() != null ? String.valueOf(currentPlayer.getUserId()) : currentPlayer.getSessionId());
+                dataPayload.put("playerId",
+                        currentPlayer.getUserId() != null ? String.valueOf(currentPlayer.getUserId())
+                                : currentPlayer.getSessionId());
                 dataPayload.put("cardNumber", playedCard.getNumber());
                 dataPayload.put("reason", "该牌比所有行的最后一张牌都小");
                 // 保留选项信息供前端参考
@@ -849,8 +893,8 @@ public class GameLogicService {
                 choicePromptPayload.put("data", dataPayload);
                 choicePromptPayload.put("roomId", room.getRoomId());
 
-
-                WebSocketSession choosingPlayerSession = gameWebSocketHandler.getSessionById(currentPlayer.getSessionId());
+                WebSocketSession choosingPlayerSession = gameWebSocketHandler
+                        .getSessionById(currentPlayer.getSessionId());
                 // 如果玩家是在线的（非托管）
                 if (choosingPlayerSession != null && !currentPlayer.isTrustee()) {
                     try {
@@ -877,7 +921,8 @@ public class GameLogicService {
             } else { // 如果可以正常放置
                 // 保险：如果前面逻辑判断能放但没选出目标行（几乎不可能）
                 if (targetRowIndex == -1) {
-                    logger.error("严重错误：玩家 {} 的牌 {} 在房间 {} 中未找到可放置的牌列且未被强制选择。默认放到第0行。", playedCard.getNumber(), playerDisplayNameForLog, room.getRoomId());
+                    logger.error("严重错误：玩家 {} 的牌 {} 在房间 {} 中未找到可放置的牌列且未被强制选择。默认放到第0行。", playedCard.getNumber(),
+                            playerDisplayNameForLog, room.getRoomId());
                     // 强制放到第一行
                     targetRowIndex = 0;
                 }
@@ -885,11 +930,13 @@ public class GameLogicService {
                 // 根据 GameRow.MAX_CARDS_IN_ROW (值为5) 的规则：
                 // 如果行内已有5张牌 (selectedRow.getCards().size() == 5)，这张是第6张牌的动作，导致拿走
                 if (selectedRow.getCards().size() == selectedRow.getMAX_CARDS_IN_ROW()) {
-                    handlePlayerTakesRow(room, currentPlayer, targetRowIndex, playedCard, "拿走已满牌列(第"+(selectedRow.getMAX_CARDS_IN_ROW()+1)+"张)");
+                    handlePlayerTakesRow(room, currentPlayer, targetRowIndex, playedCard,
+                            "拿走已满牌列(第" + (selectedRow.getMAX_CARDS_IN_ROW() + 1) + "张)");
                 } else { // 否则 (行内0-4张牌)，安全添加
                     selectedRow.addCard(playedCard);
                 }
-                broadcastGameState(room.getRoomId(), playerDisplayNameForLog + " 的牌 " + playedCard.getNumber() + " 已放置。", room);
+                broadcastGameState(room.getRoomId(),
+                        playerDisplayNameForLog + " 的牌 " + playedCard.getNumber() + " 已放置。", room);
                 // 继续处理下一张牌
                 processNextCardInTrick(room);
             }
@@ -936,7 +983,8 @@ public class GameLogicService {
             if (room == null || room.getGameState() != GameState.WAITING_FOR_PLAYER_CHOICE ||
                     !sessionId.equals(room.getPlayerChoosingRowSessionId())) {
                 logger.warn("无效的牌列选择尝试。房间: {}, 状态: {}, 应选择玩家: {}, 当前玩家: {}",
-                        roomId, room != null ? room.getGameState() : "N/A", room != null ? room.getPlayerChoosingRowSessionId() : "N/A", sessionId);
+                        roomId, room != null ? room.getGameState() : "N/A",
+                        room != null ? room.getPlayerChoosingRowSessionId() : "N/A", sessionId);
                 sendErrorToUserSession(session, roomId, "现在不是您选择牌列的时间或状态无效。");
                 return;
             }
@@ -972,7 +1020,8 @@ public class GameLogicService {
             int collectedBullheads = handlePlayerTakesRow(room, currentPlayer, chosenRowIndex, playedCard, "玩家选择的牌列");
 
             // 发送 rowSelected 确认消息
-            sendRowSelectedMessage(roomId, currentPlayer, chosenRowIndex, collectedBullheads, room.getRows().get(chosenRowIndex));
+            sendRowSelectedMessage(roomId, currentPlayer, chosenRowIndex, collectedBullheads,
+                    room.getRows().get(chosenRowIndex));
 
             // 清除选择状态
             clearChoiceState(room);
@@ -1024,15 +1073,17 @@ public class GameLogicService {
             logger.info("服务器为玩家 {} (超时) 在房间 {} 自动选择了牌列 {} (猪头数: {})。",
                     currentPlayer.getDisplayName(), roomId, autoChosenRowIndex + 1, minBullheads);
 
-
-            int collectedBullheads = handlePlayerTakesRow(room, currentPlayer, autoChosenRowIndex, playedCard, "超时后服务器自动选择");
+            int collectedBullheads = handlePlayerTakesRow(room, currentPlayer, autoChosenRowIndex, playedCard,
+                    "超时后服务器自动选择");
 
             // 发送 rowSelected 确认消息
-            sendRowSelectedMessage(roomId, currentPlayer, autoChosenRowIndex, collectedBullheads, room.getRows().get(autoChosenRowIndex));
+            sendRowSelectedMessage(roomId, currentPlayer, autoChosenRowIndex, collectedBullheads,
+                    room.getRows().get(autoChosenRowIndex));
 
             clearChoiceState(room);
             room.setGameState(GameState.PROCESSING_TURN);
-            broadcastGameState(roomId, currentPlayer.getDisplayName() + " 选择超时，服务器自动选择了第 " + (autoChosenRowIndex + 1) + " 行。", room);
+            broadcastGameState(roomId,
+                    currentPlayer.getDisplayName() + " 选择超时，服务器自动选择了第 " + (autoChosenRowIndex + 1) + " 行。", room);
 
             processNextCardInTrick(room);
 
@@ -1057,13 +1108,13 @@ public class GameLogicService {
         logger.debug("房间 {} 的选择状态已清除，所有相关计时器已尝试取消。", room.getRoomId());
     }
 
-
     // 处理玩家拿走指定牌列，委托给 Engine
-    private int handlePlayerTakesRow(GameRoom room, Player player, int rowIndex, Card newCardForThisRow, String reason) {
+    private int handlePlayerTakesRow(GameRoom room, Player player, int rowIndex, Card newCardForThisRow,
+            String reason) {
         GameEngine engine = gameEngineFactory.getEngine(room.getGameType());
         int collectedBullheads = 0;
         if (engine instanceof TopHogGameEngine) {
-             collectedBullheads = ((TopHogGameEngine) engine).executeTakeRow(room, player, rowIndex, newCardForThisRow);
+            collectedBullheads = ((TopHogGameEngine) engine).executeTakeRow(room, player, rowIndex, newCardForThisRow);
         } else {
             logger.error("不支持的游戏类型用于 takeRow: " + room.getGameType());
         }
@@ -1074,7 +1125,8 @@ public class GameLogicService {
         return collectedBullheads;
     }
 
-    private void sendRowSelectedMessage(String roomId, Player player, int rowIndex, int collectedBullheads, GameRow newRow) {
+    private void sendRowSelectedMessage(String roomId, Player player, int rowIndex, int collectedBullheads,
+            GameRow newRow) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("type", "rowSelected");
         Map<String, Object> data = new HashMap<>();
@@ -1095,7 +1147,8 @@ public class GameLogicService {
             // "Frontend pops up selection dialog" -> "User must choose" -> "Confirm".
             // 通常广播 roomStateUpdate 足以更新场面，这个 rowSelected 更多是给操作者的反馈弹窗用 (如显示 "收牌成功")。
             // 不过如果是为了让所有人都看到动画（如果有），可能需要广播。
-            // 文档没明确说广播，但通常 "Frontend: Close dialog, Show 'Collected Success'" implies user context.
+            // 文档没明确说广播，但通常 "Frontend: Close dialog, Show 'Collected Success'" implies user
+            // context.
             // 还是发给操作者吧。
             WebSocketSession session = gameWebSocketHandler.getSessionById(player.getSessionId());
             if (session != null && session.isOpen()) {
@@ -1108,7 +1161,7 @@ public class GameLogicService {
 
     // 结束一个出牌回合（所有牌都处理完后）
     private void finalizeTurn(GameRoom room) {
-        if(room == null) {
+        if (room == null) {
             logger.warn("finalizeTurn: room is null");
             return;
         }
@@ -1130,23 +1183,27 @@ public class GameLogicService {
             room.setGameState(GameState.GAME_OVER);
             // 根据最终分数决定赢家
             Player winner = determineWinner(room);
-            String winnerName = (winner != null && winner.getDisplayName() != null && !winner.getDisplayName().isEmpty())
-                    ? winner.getDisplayName() : null;
+            String winnerName = (winner != null && winner.getDisplayName() != null
+                    && !winner.getDisplayName().isEmpty())
+                            ? winner.getDisplayName()
+                            : null;
             room.setWinnerDisplayName(winnerName);
 
             String gameOverMsg = "游戏结束！";
             if (playerReachedScoreLimit != null) {
-                gameOverMsg += "玩家 " + playerReachedScoreLimit.getDisplayName() + (playerReachedScoreLimit.isTrustee() ? " (托管)" : "") + " 猪头数达到或超过66。";
+                gameOverMsg += "玩家 " + playerReachedScoreLimit.getDisplayName()
+                        + (playerReachedScoreLimit.isTrustee() ? " (托管)" : "") + " 猪头数达到或超过66。";
             }
             if (winner != null && winnerName != null) {
                 gameOverMsg += "最终赢家是: " + winnerName + " (" + winner.getScore() + "猪头)";
             } else if (playerReachedScoreLimit == null && winner == null && !room.getPlayers().isEmpty()) {
                 gameOverMsg += " 本局游戏没有明确赢家。";
-            } else if (room.getPlayers().isEmpty()){
+            } else if (room.getPlayers().isEmpty()) {
                 gameOverMsg += " 所有玩家已离开。";
             }
 
-            logger.info("finalizeTurn (游戏因分数结束): room.winnerDisplayName = {}, 消息: {}", room.getWinnerDisplayName(), gameOverMsg);
+            logger.info("finalizeTurn (游戏因分数结束): room.winnerDisplayName = {}, 消息: {}", room.getWinnerDisplayName(),
+                    gameOverMsg);
             broadcastGameState(room.getRoomId(), gameOverMsg, room);
             // 保存历史记录
             saveGameHistory(room);
@@ -1159,8 +1216,22 @@ public class GameLogicService {
             // 设置为“一轮结束”状态
             room.setGameState(GameState.ROUND_OVER);
             broadcastGameState(room.getRoomId(), "第 " + room.getCurrentTurnNumber() + " 次出牌结束，本轮完毕。", room);
-            // 开始新一轮发牌和游戏
-            startNewRound(room);
+
+            // 延迟3秒后开始新一轮,给前端足够时间显示战绩面板
+            String roomIdForTask = room.getRoomId();
+            taskScheduler.schedule(() -> {
+                Lock roomLock = getRoomLock(roomIdForTask);
+                roomLock.lock();
+                try {
+                    GameRoom currentRoom = gameRoomService.getRoom(roomIdForTask);
+                    if (currentRoom != null && currentRoom.getGameState() == GameState.ROUND_OVER) {
+                        logger.info("延迟后开始新一轮,房间: {}", roomIdForTask);
+                        startNewRound(currentRoom);
+                    }
+                } finally {
+                    roomLock.unlock();
+                }
+            }, java.time.Instant.now().plusMillis(3000)); // 延迟3秒
         } else { // 否则，回合数加1，继续下一回合出牌
             room.setCurrentTurnNumber(room.getCurrentTurnNumber() + 1);
             room.setGameState(GameState.PLAYING);
@@ -1217,7 +1288,8 @@ public class GameLogicService {
             }
             p.setRequestedNewGame(true);
             long active = room.getPlayers().values().stream().filter(pl -> !pl.isTrustee()).count();
-            long requested = room.getPlayers().values().stream().filter(pl -> !pl.isTrustee() && pl.isRequestedNewGame()).count();
+            long requested = room.getPlayers().values().stream()
+                    .filter(pl -> !pl.isTrustee() && pl.isRequestedNewGame()).count();
             // 改为>=，以防万一有额外请求
             if (active > 0 && requested >= active) {
                 // startGame(roomId, session.getId());
@@ -1255,12 +1327,16 @@ public class GameLogicService {
                     continue;
                 }
 
-                Player playerToRejoin = null; String oldSessionId = null;
+                Player playerToRejoin = null;
+                String oldSessionId = null;
                 // 遍历查找是否有与当前连接用户ID相同且处于托管状态的玩家
                 // 复制Set进行迭代，允许修改原Map
                 for (Map.Entry<String, Player> entry : new HashSet<>(room.getPlayers().entrySet())) {
-                    if (entry.getValue().getUserId() != null && entry.getValue().getUserId().equals(user.getId()) && entry.getValue().isTrustee()) {
-                        playerToRejoin = entry.getValue(); oldSessionId = entry.getKey(); break;
+                    if (entry.getValue().getUserId() != null && entry.getValue().getUserId().equals(user.getId())
+                            && entry.getValue().isTrustee()) {
+                        playerToRejoin = entry.getValue();
+                        oldSessionId = entry.getKey();
+                        break;
                     }
                 }
                 if (playerToRejoin != null) {
@@ -1271,7 +1347,8 @@ public class GameLogicService {
                     // 更新玩家信息
                     playerToRejoin.setSessionId(newSession.getId());
                     playerToRejoin.setTrustee(false);
-                    playerToRejoin.setReady(false); playerToRejoin.setRequestedNewGame(false);
+                    playerToRejoin.setReady(false);
+                    playerToRejoin.setRequestedNewGame(false);
                     playerToRejoin.setVipStatus(user.getVipStatus());
                     // 使用新会话ID添加回房间
                     room.getPlayers().put(newSession.getId(), playerToRejoin);
@@ -1283,14 +1360,16 @@ public class GameLogicService {
                         String newWinnerName = newWinner != null ? newWinner.getDisplayName() : null;
                         if ((newWinnerName != null && !newWinnerName.equals(room.getWinnerDisplayName())) ||
                                 (newWinnerName == null && room.getWinnerDisplayName() != null) ||
-                                (newWinnerName != null && room.getWinnerDisplayName() == null) ) {
+                                (newWinnerName != null && room.getWinnerDisplayName() == null)) {
                             logger.info("因玩家重返，获胜者更新。旧: {}, 新: {}", room.getWinnerDisplayName(), newWinnerName);
                             room.setWinnerDisplayName(newWinnerName);
                         }
                     }
                     return room;
                 }
-            } finally { roomLock.unlock(); }
+            } finally {
+                roomLock.unlock();
+            }
         }
         return null;
     }
@@ -1326,9 +1405,13 @@ public class GameLogicService {
                 if (!p.getSessionId().equals(session.getId())) { // 不同会话，尝试重连托管
                     // 只有当玩家处于托管状态，且游戏正在进行中（非结束、非等待、非回合结束）时，才允许这种方式的“重连托管”
                     // 仅限PLAYING状态
-                    if ((p.isTrustee() && room.getGameState() == GameState.PLAYING) || room.getGameState() == GameState.WAITING) {
+                    if ((p.isTrustee() && room.getGameState() == GameState.PLAYING)
+                            || room.getGameState() == GameState.WAITING) {
                         room.getPlayers().remove(p.getSessionId());
-                        p.setSessionId(session.getId()); p.setTrustee(false); p.setReady(false); p.setRequestedNewGame(false);
+                        p.setSessionId(session.getId());
+                        p.setTrustee(false);
+                        p.setReady(false);
+                        p.setRequestedNewGame(false);
                         p.setVipStatus(user.getVipStatus());
                         // 维持房主状态
                         // 维持机器人状态（通过会话重连不是机器人）
@@ -1347,12 +1430,14 @@ public class GameLogicService {
                     } else {
                         p.setHost(false);
                     }
-                    Map<String, Object> payload = new HashMap<>(); payload.put("type", "gameStateUpdate");
-                    payload.put("message", "您已在房间中。"); payload.put("roomState", room);
+                    Map<String, Object> payload = new HashMap<>();
+                    payload.put("type", "gameStateUpdate");
+                    payload.put("message", "您已在房间中。");
+                    payload.put("roomState", room);
                     try {
                         gameWebSocketHandler.sendMessageToSession(session, payload);
                     } catch (IOException e) {
-                        logger.error("发送重复加入状态时出错",e);
+                        logger.error("发送重复加入状态时出错", e);
                     }
                 }
             } else { // 新玩家加入
@@ -1362,11 +1447,12 @@ public class GameLogicService {
                     return;
                 }
                 // 检查房间人数是否已满（只算未托管的）
-                if (room.getPlayers().values().stream().filter(pl->!pl.isTrustee()).count() >= room.getMaxPlayers()) {
+                if (room.getPlayers().values().stream().filter(pl -> !pl.isTrustee()).count() >= room.getMaxPlayers()) {
                     sendErrorToUserSession(session, roomId, "房间活跃玩家人数已满。");
                     return;
                 }
-                String name = user.getNickname()!=null && !user.getNickname().isEmpty() ? user.getNickname() : user.getUsername();
+                String name = user.getNickname() != null && !user.getNickname().isEmpty() ? user.getNickname()
+                        : user.getUsername();
                 Player newP = new Player(session.getId(), user.getId(), name, user.getVipStatus());
                 // 初始化新玩家的游戏数据
                 newP.resetForNewGame();
@@ -1388,9 +1474,10 @@ public class GameLogicService {
 
     /**
      * 房主移除玩家 (踢人)
-     * @param roomId 房间ID
+     * 
+     * @param roomId          房间ID
      * @param requesterUserId 发起请求的用户ID (必须是房主)
-     * @param targetUserId 被踢的目标用户ID
+     * @param targetUserId    被踢的目标用户ID
      */
     public void kickPlayer(String roomId, Long requesterUserId, Long targetUserId) {
         GameRoom room = gameRoomService.getRoom(roomId);
@@ -1423,7 +1510,8 @@ public class GameLogicService {
             }
 
             String targetSessionId = targetPlayer.getSessionId();
-            logger.info("玩家 {} (ID: {}) 被房主 {} 从房间 {} 移除。", targetPlayer.getDisplayName(), targetUserId, requesterUserId, roomId);
+            logger.info("玩家 {} (ID: {}) 被房主 {} 从房间 {} 移除。", targetPlayer.getDisplayName(), targetUserId,
+                    requesterUserId, roomId);
 
             // 通知目标
             WebSocketSession session = gameWebSocketHandler.getSessionById(targetSessionId);
@@ -1533,7 +1621,8 @@ public class GameLogicService {
 
     /**
      * 获取出牌提示（VIP功能）
-     * @param roomId 房间ID
+     * 
+     * @param roomId                    房间ID
      * @param requestingPlayerSessionId 请求提示的玩家会话ID
      * @return 包含建议牌号、预计猪头数和原因的Map，或错误信息
      */
@@ -1552,9 +1641,10 @@ public class GameLogicService {
             }
             // 移除 VIP 检查，允许所有玩家使用提示功能
             // if (requestingPlayer.getVipStatus() == 0) {
-            //     return Collections.singletonMap("error", "非会员无法使用此功能。");
+            // return Collections.singletonMap("error", "非会员无法使用此功能。");
             // }
-            if (room.getGameState() != GameState.PLAYING || requestingPlayer.isTrustee() || requestingPlayer.getHand().isEmpty()) {
+            if (room.getGameState() != GameState.PLAYING || requestingPlayer.isTrustee()
+                    || requestingPlayer.getHand().isEmpty()) {
                 return Collections.singletonMap("error", "当前状态无法获取提示。");
             }
             logger.info("会员 {} 请求提示，房间 {}", requestingPlayer.getDisplayName(), roomId);
@@ -1574,7 +1664,8 @@ public class GameLogicService {
             Map<String, List<Card>> otherActivePlayerHands = new HashMap<>();
             if (room.getAllPlayerHandsForAI() != null) {
                 room.getPlayers().forEach((sid, p) -> {
-                    if (!sid.equals(requestingPlayerSessionId) && !p.isTrustee() && room.getAllPlayerHandsForAI().containsKey(sid)) {
+                    if (!sid.equals(requestingPlayerSessionId) && !p.isTrustee()
+                            && room.getAllPlayerHandsForAI().containsKey(sid)) {
                         otherActivePlayerHands.put(sid, new ArrayList<>(room.getAllPlayerHandsForAI().get(sid)));
                     }
                 });
@@ -1612,7 +1703,8 @@ public class GameLogicService {
                     bestCardToPlay = cardInHand;
                     bestReason = result.getReason();
                 } else if (result.getBullheads() == minExpectedBullheads) {
-                    if (bestCardToPlay == null || (cardInHand != null && cardInHand.getNumber() < bestCardToPlay.getNumber())) {
+                    if (bestCardToPlay == null
+                            || (cardInHand != null && cardInHand.getNumber() < bestCardToPlay.getNumber())) {
                         bestCardToPlay = cardInHand;
                         bestReason = result.getReason() + " (同猪头，选小编号)";
                     }
@@ -1625,7 +1717,7 @@ public class GameLogicService {
                 response.put("estimatedBullheads", minExpectedBullheads);
                 response.put("reason", bestReason);
                 return response;
-            } else if (!playerHand.isEmpty()){
+            } else if (!playerHand.isEmpty()) {
                 Card fallbackCard = playerHand.get(0);
                 List<GameRow> rowsForFallbackSim = new ArrayList<>();
                 for (GameRow originalRoomRow : room.getRows()) {
@@ -1637,7 +1729,9 @@ public class GameLogicService {
                     }
                     rowsForFallbackSim.add(copiedRow);
                 }
-                EstimatedPlayResult fallbackResult = calculateAdvancedExpectedBullheads(fallbackCard, rowsForFallbackSim, otherPlayedCardsThisTurn, otherActivePlayerHands, requestingPlayerSessionId, room);
+                EstimatedPlayResult fallbackResult = calculateAdvancedExpectedBullheads(fallbackCard,
+                        rowsForFallbackSim, otherPlayedCardsThisTurn, otherActivePlayerHands, requestingPlayerSessionId,
+                        room);
                 Map<String, Object> response = new HashMap<>();
                 response.put("suggestedCardNumber", fallbackCard.getNumber());
                 response.put("estimatedBullheads", fallbackResult.getBullheads());
@@ -1654,7 +1748,9 @@ public class GameLogicService {
     private void scheduleRoomDestructionIfEmpty(String roomId, long delayMs) {
         taskScheduler.schedule(() -> {
             GameRoom room = gameRoomService.getRoom(roomId);
-            if (room == null) { return; }
+            if (room == null) {
+                return;
+            }
 
             Lock roomLock = getRoomLock(roomId);
             roomLock.lock();
@@ -1666,9 +1762,10 @@ public class GameLogicService {
                         .anyMatch(p -> !p.isTrustee());
 
                 if (humanCount <= 1 && !humanIsConnected) {
-                     logger.info("Timeout reached: Room {} still has no active humans (Single player mode). Destroying.", roomId);
-                     gameRoomService.removeRoom(roomId);
-                     roomLocks.remove(roomId);
+                    logger.info("Timeout reached: Room {} still has no active humans (Single player mode). Destroying.",
+                            roomId);
+                    gameRoomService.removeRoom(roomId);
+                    roomLocks.remove(roomId);
                 }
             } finally {
                 roomLock.unlock();
@@ -1678,18 +1775,40 @@ public class GameLogicService {
 
     // 内部辅助类：用于AI提示返回结果
     private static class EstimatedPlayResult {
-        private final int bullheads; private final String reason;
-        public EstimatedPlayResult(int bullheads, String reason) { this.bullheads = bullheads; this.reason = reason; }
-        public int getBullheads() { return bullheads; }
-        public String getReason() { return reason; }
+        private final int bullheads;
+        private final String reason;
+
+        public EstimatedPlayResult(int bullheads, String reason) {
+            this.bullheads = bullheads;
+            this.reason = reason;
+        }
+
+        public int getBullheads() {
+            return bullheads;
+        }
+
+        public String getReason() {
+            return reason;
+        }
     }
 
     // 内部辅助类：用于AI提示模拟回合
     private static class PlayerCardTurnEntry {
-        private final String playerId; private final Card card;
-        public PlayerCardTurnEntry(String playerId, Card card) { this.playerId = playerId; this.card = card; }
-        public String getPlayerId() { return playerId; }
-        public Card getCard() { return card; }
+        private final String playerId;
+        private final Card card;
+
+        public PlayerCardTurnEntry(String playerId, Card card) {
+            this.playerId = playerId;
+            this.card = card;
+        }
+
+        public String getPlayerId() {
+            return playerId;
+        }
+
+        public Card getCard() {
+            return card;
+        }
     }
 
     // AI大脑核心：评估打出某张牌的预期结果
@@ -1724,10 +1843,16 @@ public class GameLogicService {
                 if (last != null && currentCard.getNumber() > last.getNumber()) {
                     canPlace = true;
                     int diff = currentCard.getNumber() - last.getNumber();
-                    if (diff < bestDiff) { bestDiff = diff; targetRowIdx = i; }
+                    if (diff < bestDiff) {
+                        bestDiff = diff;
+                        targetRowIdx = i;
+                    }
                 } else if (last == null) { // 空行
                     canPlace = true;
-                    if (targetRowIdx == -1 || bestDiff > 100000) { bestDiff = 100000 + i; targetRowIdx = i;}
+                    if (targetRowIdx == -1 || bestDiff > 100000) {
+                        bestDiff = 100000 + i;
+                        targetRowIdx = i;
+                    }
                 }
             }
 
@@ -1739,7 +1864,8 @@ public class GameLogicService {
                 if (selectedSimRow.getCards().size() == selectedSimRow.getMAX_CARDS_IN_ROW()) {
                     if (isMyCard) {
                         bullheadsTaken = selectedSimRow.getBullheadSum();
-                        reason = "危险! 牌 " + currentCard.getNumber() + " 放第" + (targetRowIdx + 1) + "行将是第6张,拿走" + bullheadsTaken + "猪头。";
+                        reason = "危险! 牌 " + currentCard.getNumber() + " 放第" + (targetRowIdx + 1) + "行将是第6张,拿走"
+                                + bullheadsTaken + "猪头。";
                     }
                     // 模拟拿走并替换: 先清空模拟行，再把当前牌加入
                     selectedSimRow.getCards().clear();
@@ -1747,7 +1873,9 @@ public class GameLogicService {
                 } else { // 安全放置 (行内0-4张牌)
                     if (isMyCard) {
                         bullheadsTaken = 0;
-                        reason = "安全。牌 " + currentCard.getNumber() + " 可放第" + (targetRowIdx + 1) + "行(当前"+(selectedSimRow.getCards().size()+1)+"/"+selectedSimRow.getMAX_CARDS_IN_ROW()+"张)。";
+                        reason = "安全。牌 " + currentCard.getNumber() + " 可放第" + (targetRowIdx + 1) + "行(当前"
+                                + (selectedSimRow.getCards().size() + 1) + "/" + selectedSimRow.getMAX_CARDS_IN_ROW()
+                                + "张)。";
                     }
                     selectedSimRow.addCard(currentCard);
                 }
@@ -1756,7 +1884,8 @@ public class GameLogicService {
                     int minBH = Integer.MAX_VALUE, chosenIdx = 0;
                     for (int i = 0; i < simulatedRows.size(); i++) {
                         if (simulatedRows.get(i).getBullheadSum() < minBH) {
-                            minBH = simulatedRows.get(i).getBullheadSum(); chosenIdx = i;
+                            minBH = simulatedRows.get(i).getBullheadSum();
+                            chosenIdx = i;
                         }
                     }
                     bullheadsTaken = minBH;
@@ -1768,7 +1897,8 @@ public class GameLogicService {
                     int minBH = Integer.MAX_VALUE, chosenIdx = 0;
                     for (int i = 0; i < simulatedRows.size(); i++) {
                         if (simulatedRows.get(i).getBullheadSum() < minBH) {
-                            minBH = simulatedRows.get(i).getBullheadSum(); chosenIdx = i;
+                            minBH = simulatedRows.get(i).getBullheadSum();
+                            chosenIdx = i;
                         }
                     }
                     simulatedRows.get(chosenIdx).getCards().clear();
@@ -1793,9 +1923,15 @@ public class GameLogicService {
                 Card l = r.getLastCard();
                 if (l != null && cardToPlay.getNumber() > l.getNumber()) {
                     int d = cardToPlay.getNumber() - l.getNumber();
-                    if (d < tempBestDiffForMyCard) { tempBestDiffForMyCard = d; initialTargetRowForMyCard = i; }
+                    if (d < tempBestDiffForMyCard) {
+                        tempBestDiffForMyCard = d;
+                        initialTargetRowForMyCard = i;
+                    }
                 } else if (l == null) { // 空行
-                    if (initialTargetRowForMyCard == -1 || tempBestDiffForMyCard > 100000) { tempBestDiffForMyCard = 100000+i; initialTargetRowForMyCard = i; }
+                    if (initialTargetRowForMyCard == -1 || tempBestDiffForMyCard > 100000) {
+                        tempBestDiffForMyCard = 100000 + i;
+                        initialTargetRowForMyCard = i;
+                    }
                 }
             }
 
@@ -1818,7 +1954,8 @@ public class GameLogicService {
                     for (Card cOther : otherHand) {
                         // “捣乱牌”：比你的牌小（会先出），且能放到你的目标行
                         if (cOther.getNumber() < cardToPlay.getNumber() &&
-                                (lastOnIntendedRealRow == null || cOther.getNumber() > lastOnIntendedRealRow.getNumber())) {
+                                (lastOnIntendedRealRow == null
+                                        || cOther.getNumber() > lastOnIntendedRealRow.getNumber())) {
                             potentialInterferingCardsCount++;
                         }
                     }
@@ -1828,7 +1965,8 @@ public class GameLogicService {
 
                 // 如果捣乱牌数量足以填满剩余安全位（且原先有安全位）
                 if (potentialInterferingCardsCount >= safeSpotsLeft && safeSpotsLeft > 0) {
-                    reason += " (高风险: 其他人有 " + potentialInterferingCardsCount + " 张牌可能抢先填满目标行，该行仅剩 " + safeSpotsLeft + " 安全位!)";
+                    reason += " (高风险: 其他人有 " + potentialInterferingCardsCount + " 张牌可能抢先填满目标行，该行仅剩 " + safeSpotsLeft
+                            + " 安全位!)";
                     // bullheadsTaken += 1; // 可以考虑给一个小的猪头惩罚
                 } else if (potentialInterferingCardsCount > 0 && safeSpotsLeft > 0) {
                     reason += " (中风险: 其他人有 " + potentialInterferingCardsCount + " 张牌可能抢位)";
