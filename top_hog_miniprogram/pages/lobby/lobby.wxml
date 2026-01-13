@@ -108,6 +108,11 @@
   <view class="footer">
     <text class="tip-text">支持 <text class="tip-link">微信分享卡片</text> 邀请好友，点击即可直接进入对应房间。</text>
   </view>
+  <!-- 底部Banner广告 -->
+  <view class="ad-container" style="margin-top: 20rpx; padding-bottom: 20rpx;">
+    <ad unit-id="adunit-xxxx" ad-intervals="30"></ad>
+  </view>
+
   <!-- 新手引导弹窗 -->
   <view class="guide-mask" wx:if="{{showGuide}}">
     <view class="guide-modal">

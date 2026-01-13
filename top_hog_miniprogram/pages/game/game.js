@@ -51,11 +51,11 @@ Page({
 
   onLoad(options) {
     console.log('游戏页面 onLoad，options:', options);
-    
+
     // 从多个来源获取 roomId（优先级：options > 全局数据 > 存储）
     let roomId = options.roomId;
     let gameState = null;
-    
+
     if (!roomId) {
       const globalRoom = app.globalData.currentRoom;
       if (globalRoom) {
@@ -64,23 +64,23 @@ Page({
         gameState = app.globalData.gameState || globalRoom;
       }
     }
-    
+
     if (!roomId) {
       const storedRoom = wx.getStorageSync('currentRoom');
       if (storedRoom) {
         roomId = storedRoom.roomId || storedRoom.id;
       }
     }
-    
+
     // 尝试从存储中获取游戏状态
     if (!gameState) {
       gameState = wx.getStorageSync('gameState');
     }
-    
+
     if (roomId) {
       console.log('找到房间ID:', roomId);
       this.setData({ roomId: roomId });
-      
+
       // 如果有保存的游戏状态，先使用它渲染页面（避免空白）
       if (gameState && gameState.gameState === 'PLAYING') {
         console.log('使用保存的游戏状态渲染页面');
@@ -97,11 +97,21 @@ Page({
           this.fetchGameState(roomId);
         }, 200);
       }
-      
+
       // 不在 onLoad 主动连接 WebSocket，统一在 onShow 处理，避免重复连接导致事件丢失/数据不同步
     } else {
       console.warn('未找到房间ID，将在onShow中重试');
       // 不立即提示错误，等待onShow时再处理
+    }
+
+    // 初始化插屏广告
+    if (wx.createInterstitialAd) {
+      this._interstitialAd = wx.createInterstitialAd({
+        adUnitId: 'adunit-yyyy'
+      });
+      this._interstitialAd.onLoad(() => { console.log('插屏广告加载成功'); });
+      this._interstitialAd.onError((err) => { console.error('插屏广告加载失败', err); });
+      this._interstitialAd.onClose(() => { console.log('插屏广告关闭'); });
     }
   },
 
@@ -121,7 +131,7 @@ Page({
       socketOpen,
       socketConnecting
     });
-    
+
     // 如果没有roomId，尝试从全局数据或存储中获取
     if (!roomId) {
       const globalRoom = app.globalData.currentRoom || wx.getStorageSync('currentRoom');
@@ -133,7 +143,7 @@ Page({
         }
       }
     }
-    
+
     if (roomId) {
       // 如果WebSocket未连接，则连接
       if (!this.data.wsConnected && !socketOpen && !socketConnecting) {
@@ -188,7 +198,7 @@ Page({
       console.error('connectWebSocket: roomId为空');
       return;
     }
-    
+
     // 防重复连接：onLoad/onShow/热重载可能触发多次
     if (socketConnecting) {
       console.log('connectWebSocket: 正在连接中，跳过重复调用');
@@ -203,7 +213,7 @@ Page({
       socketOpen = false;
       this.setData({ wsConnected: false });
     }
-    
+
     const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
     if (!userInfo || !userInfo.id) {
       console.error('connectWebSocket: 用户信息或用户ID缺失', userInfo);
@@ -219,12 +229,12 @@ Page({
       }, 2000);
       return;
     }
-    
+
     // 使用用户ID作为userIdentifier（必须是数字）
     const userIdentifier = userInfo.id;
     const wsUrl = `${app.globalData.wsUrl}?roomId=${roomId}&userIdentifier=${userIdentifier}`;
     console.log('连接WebSocket:', wsUrl);
-    
+
     // 先尝试获取一次游戏状态（不等待WebSocket）
     console.log('========== 连接WebSocket前，先尝试获取游戏状态 ==========');
     console.log('roomId:', roomId);
@@ -235,7 +245,7 @@ Page({
     } else {
       console.error('this.fetchGameState 不是函数！');
     }
-    
+
     wx.connectSocket({ url: wsUrl });
 
     // 注意：wx.onSocketOpen 可能会被多次调用，但每次连接只会触发一次
@@ -245,20 +255,20 @@ Page({
       socketOpen = true;
       socketConnecting = false;
       this.setData({ wsConnected: true });
-      
+
       // 发送加入房间消息
       this.sendSocketMsg({ type: 'joinRoom', roomId, userIdentifier });
-      
+
       // 发送队列中的消息
       while (socketMsgQueue.length > 0) {
         wx.sendSocketMessage({ data: socketMsgQueue.shift() });
       }
-      
+
       // 连接成功后，再次获取当前游戏状态（确保数据是最新的）
       console.log('WebSocket连接成功，准备调用 fetchGameState，roomId:', roomId);
       setTimeout(() => {
         this.fetchGameState(roomId);
-        
+
         // 检查是否需要自动发送requestNewGame
         if (app.globalData.autoRequestNewGame) {
           console.log('[GAME] 检测到autoRequestNewGame标志，发送requestNewGame消息');
@@ -369,17 +379,17 @@ Page({
     }
     this._fetchingGameState = true;
     this._lastFetchGameStateAt = now;
-    
+
     console.log('========== 开始调用 fetchGameState ==========');
     console.log('roomId:', roomId);
     console.log('gameApi:', gameApi);
     console.log('gameApi.getGameState:', gameApi.getGameState);
-    
+
     if (!gameApi || !gameApi.getGameState) {
       console.error('gameApi.getGameState 不存在！');
       return;
     }
-    
+
     console.log('调用 gameApi.getGameState，roomId:', roomId);
     gameApi.getGameState(roomId)
       .then((gameState) => {
@@ -427,7 +437,7 @@ Page({
     const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
     const userId = userInfo.id; // 使用用户ID来匹配
     const players = Object.values(roomState.players || {});
-    
+
     // 改进玩家匹配逻辑，支持多种ID格式
     const currentPlayer = players.find(p => {
       // 优先使用ID匹配（支持字符串和数字类型转换）
@@ -444,25 +454,25 @@ Page({
       }
       return false;
     });
-    
+
     // 格式化玩家信息
     // 获取已出牌信息
     const playedCards = roomState.playedCardsThisTurn || {};
-    
+
     // 判断所有玩家是否都出完牌
     const allPlayersPlayed = players.length > 0 && players.every(p => p.hasPlayed);
-    
+
     console.log('[GAME] 所有玩家出牌状态:', {
       totalPlayers: players.length,
       playedCount: players.filter(p => p.hasPlayed).length,
       allPlayersPlayed: allPlayersPlayed
     });
-    
+
     const updatedPlayers = players.map(player => {
       let status = 'thinking';
       let statusText = '思考中';
       let playedCard = null;
-      
+
       // 查找该玩家已出的牌
       const playerId = player.id || player.userId || player.sessionId;
       if (playedCards[playerId]) {
@@ -471,7 +481,7 @@ Page({
           bullheads: playedCards[playerId].bullheads || 0
         };
       }
-      
+
       if (player.hasPlayed) {
         status = 'played';
         statusText = '已出牌';
@@ -497,7 +507,7 @@ Page({
         animationStyle: ''
       };
     });
-    
+
     // 计算空位（总共10个位置 - 当前玩家数）
     const emptySlots = Array.from({ length: Math.max(0, 10 - updatedPlayers.length) }, (_, i) => ({ index: i }));
 
@@ -513,27 +523,27 @@ Page({
       } : null,
       userId: userId
     });
-    
+
     // 本游戏为"同时出牌"机制：每回合所有玩家同时选牌并确认
     // 因此不能用 isCurrentTurn 控制出牌权限；改为"未出牌且未托管即可出牌"
     const canPlay = roomState.gameState === 'PLAYING'
       && !(currentPlayer && currentPlayer.hasPlayed)
       && !(currentPlayer && currentPlayer.isTrustee);
     const playerHand = (currentPlayer && currentPlayer.hand || []).sort((a, b) => a.number - b.number);
-    
+
     // 同步托管状态：更新本地isHosting状态与服务器isTrustee保持一致
     if (currentPlayer && currentPlayer.isTrustee !== undefined) {
       if (this.data.isHosting !== currentPlayer.isTrustee) {
         this.setData({ isHosting: currentPlayer.isTrustee });
       }
     }
-    
+
     console.log('[GAME] 手牌处理结果:', {
       playerHand: playerHand,
       handCount: playerHand.length,
       canPlay: canPlay
     });
-    
+
     // 格式化场牌（每行最多6张，第5张高亮）
     const rows = (roomState.rows || []).map((row, index) => {
       const cards = (row.cards || []).slice(0, 6); // 最多只显示6张
@@ -550,7 +560,7 @@ Page({
         isDanger: isDanger
       };
     });
-    
+
     console.log('[GAME] 场牌处理结果:', {
       serverRows: roomState.rows,
       formattedRows: rows,
@@ -573,7 +583,7 @@ Page({
 
     // 格式化已亮牌（不再触发中心弹窗动画）
     const revealedCards = Object.values(playedCards);
-    const sortedCards = revealedCards.length > 0 
+    const sortedCards = revealedCards.length > 0
       ? revealedCards.map(c => c.cardNumber || c.number).sort((a, b) => a - b).join(', ')
       : '';
 
@@ -581,7 +591,7 @@ Page({
     const finalPlayerHand = playerHand;
     const finalHandCount = playerHand.length;
     const finalRows = rows;
-    
+
     this.setData({
       roomInfo: roomState,
       // 确保 roomId 不会丢（后续 WS/出牌依赖）
@@ -601,7 +611,7 @@ Page({
       allPlayersPlayed: allPlayersPlayed,
       emptySlots: emptySlots
     });
-    
+
     // 如果所有玩家都出完牌，触发翻牌动画（延迟500ms）
     if (allPlayersPlayed && !this.data.allPlayersPlayed) {
       console.log('[GAME] 所有玩家出牌完成，准备翻牌动画');
@@ -622,7 +632,7 @@ Page({
 
     if (roomState.gameState === 'GAME_OVER' || roomState.gameState === 'FINISHED') {
       console.log('[GAME] 游戏结束，准备跳转到结算页面');
-      
+
       // 保存游戏结果到全局
       const gameResult = {
         roomId: this.data.roomId,
@@ -635,29 +645,37 @@ Page({
         rankings: updatedPlayers,
         isGameOver: true
       };
-      
+
       app.globalData.gameResult = gameResult;
       wx.setStorageSync('gameResult', gameResult);
-      
+
       console.log('[GAME] 已保存游戏结果:', gameResult);
-      
+
+      // 延迟跳转，确保数据已保存
       // 延迟跳转，确保数据已保存
       setTimeout(() => {
+        // 尝试展示插屏广告
+        if (this._interstitialAd) {
+          this._interstitialAd.show().catch((err) => {
+            console.error('插屏广告展示失败', err);
+          });
+        }
+
         // 由于 game 是 TabBar 页面，不能使用 redirectTo，改用 navigateTo
         wx.navigateTo({
           url: `/pages/result/result?roomId=${this.data.roomId}&isGameOver=true`,
           fail: (err) => {
-             console.error('跳转结算页失败，尝试使用 reLaunch', err);
-             wx.reLaunch({
-                url: `/pages/result/result?roomId=${this.data.roomId}&isGameOver=true`
-             });
+            console.error('跳转结算页失败，尝试使用 reLaunch', err);
+            wx.reLaunch({
+              url: `/pages/result/result?roomId=${this.data.roomId}&isGameOver=true`
+            });
           }
         });
-      }, 300);
+      }, 500);
     } else if (roomState.gameState === 'ROUND_END') {
       // 单局结束（非游戏彻底结束）
       console.log('[GAME] 单局结束，准备跳转到结算页面');
-      
+
       const gameResult = {
         roomId: this.data.roomId,
         roomName: roomState.roomName || '未命名房间',
@@ -669,19 +687,19 @@ Page({
         rankings: updatedPlayers,
         isGameOver: false
       };
-      
+
       app.globalData.gameResult = gameResult;
       wx.setStorageSync('gameResult', gameResult);
-      
+
       setTimeout(() => {
         // 由于 game 是 TabBar 页面，不能使用 redirectTo，改用 navigateTo
         wx.navigateTo({
           url: `/pages/result/result?roomId=${this.data.roomId}&isGameOver=false`,
           fail: (err) => {
-             console.error('跳转结算页失败，尝试使用 reLaunch', err);
-             wx.reLaunch({
-                url: `/pages/result/result?roomId=${this.data.roomId}&isGameOver=false`
-             });
+            console.error('跳转结算页失败，尝试使用 reLaunch', err);
+            wx.reLaunch({
+              url: `/pages/result/result?roomId=${this.data.roomId}&isGameOver=false`
+            });
           }
         });
       }, 300);
@@ -724,18 +742,18 @@ Page({
         String(p.userId) === String(senderId)
       );
       if (player) {
-          senderName = player.displayName || player.nickname;
+        senderName = player.displayName || player.nickname;
       } else if (String(senderId) === String(myUserId)) {
-          senderName = userInfo.nickname || '我';
+        senderName = userInfo.nickname || '我';
       } else {
-          senderName = `玩家 ${senderId}`;
+        senderName = `玩家 ${senderId}`;
       }
     }
 
     const newMsg = {
-        sender: senderName,
-        text: content,
-        id: Date.now() + Math.random()
+      sender: senderName,
+      text: content,
+      id: Date.now() + Math.random()
     };
 
     const messages = [...this.data.chatMessages, newMsg];
@@ -763,7 +781,7 @@ Page({
   handleToggleHosting() {
     const newHostingState = !this.data.isHosting;
     this.setData({ isHosting: newHostingState });
-    
+
     // 通过WebSocket通知服务器托管状态变化
     const roomId = this.getEffectiveRoomId();
     if (!roomId) {
@@ -775,11 +793,11 @@ Page({
       this.setData({ isHosting: !newHostingState });
       return;
     }
-    
+
     if (this.data.wsConnected || socketOpen) {
       const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo');
       const userIdentifier = userInfo && userInfo.id;
-      
+
       if (!userIdentifier) {
         wx.showToast({
           title: '用户信息无效',
@@ -789,14 +807,14 @@ Page({
         this.setData({ isHosting: !newHostingState });
         return;
       }
-      
+
       this.sendSocketMsg({
         type: 'toggleHosting',
         roomId: String(roomId),
         isHosting: newHostingState,
         userIdentifier
       });
-      
+
       wx.showToast({
         title: newHostingState ? '已开启托管' : '已取消托管',
         icon: 'success',
@@ -911,7 +929,7 @@ Page({
           setTimeout(() => {
             wx.closeSocket();
             wx.switchTab({
-                url: '/pages/lobby/lobby'
+              url: '/pages/lobby/lobby'
             });
           }, 200);
         }
@@ -955,7 +973,7 @@ Page({
    */
   startCardMoveAnimation() {
     console.log('[GAME] 开始卡牌移动动画');
-    
+
     const players = this.data.players;
     const updatedPlayers = players.map(player => {
       if (player.playedCard) {
@@ -966,11 +984,11 @@ Page({
       }
       return player;
     });
-    
+
     this.setData({
       players: updatedPlayers
     });
-    
+
     // 2秒后清除动画状态并清空卡牌
     setTimeout(() => {
       const finalPlayers = this.data.players.map(player => ({
@@ -978,12 +996,12 @@ Page({
         isAnimating: false,
         playedCard: null
       }));
-      
+
       this.setData({
         players: finalPlayers,
         allPlayersPlayed: false
       });
-      
+
       console.log('[GAME] 卡牌移动动画完成，已清空玩家卡牌');
     }, 2000);
   },
@@ -994,22 +1012,22 @@ Page({
    */
   playCardsAnimation(cards) {
     if (!cards || cards.length === 0) return;
-    
+
     // 按数字从小到大排序
     const sortedCards = cards.map(c => ({
       cardNumber: c.cardNumber || c.number,
       bullheads: c.bullheads || 0,
       playerName: c.playerName || c.displayName || '玩家'
     })).sort((a, b) => a.cardNumber - b.cardNumber);
-    
+
     console.log('[GAME] 开始播放出牌动画，排序后:', sortedCards);
-    
+
     // 清空当前动画
     this.setData({
       playingCards: [],
       animatingCards: []
     });
-    
+
     // 依次显示每张牌，间隔500ms
     let currentIndex = 0;
     const showNextCard = () => {
@@ -1024,29 +1042,29 @@ Page({
         }, 3000);
         return;
       }
-      
+
       const card = sortedCards[currentIndex];
       const newPlayingCards = [...this.data.playingCards, card];
       const newAnimatingCards = [...this.data.animatingCards, card.cardNumber];
-      
+
       console.log('[GAME] 显示第', currentIndex + 1, '张牌:', card);
-      
+
       this.setData({
         playingCards: newPlayingCards,
         animatingCards: newAnimatingCards
       });
-      
+
       // 500ms后移除动画class，再显示下一张
       setTimeout(() => {
         this.setData({
           animatingCards: this.data.animatingCards.filter(n => n !== card.cardNumber)
         });
       }, 500);
-      
+
       currentIndex++;
       this._cardAnimationTimer = setTimeout(showNextCard, 600);
     };
-    
+
     showNextCard();
   },
 
@@ -1072,21 +1090,21 @@ Page({
       });
       return;
     }
-    
+
     console.log('[GAME] 确认选择收牌行:', this.data.selectedRowIndex);
-    
+
     // 清除倒计时
     if (this.data.selectRowTimer) {
       clearInterval(this.data.selectRowTimer);
     }
-    
+
     // 发送选择消息到服务器
     this.sendSocketMsg({
       type: 'selectRow',
       roomId: this.data.roomId,
       rowIndex: this.data.selectedRowIndex
     });
-    
+
     // 关闭弹窗
     this.setData({
       showSelectRowModal: false,
@@ -1110,24 +1128,24 @@ Page({
    */
   showSelectRowDialog() {
     console.log('[GAME] 显示选择收牌行弹窗');
-    
+
     this.setData({
       showSelectRowModal: true,
       selectRowCountdown: 30,
       selectedRowIndex: null
     });
-    
+
     // 开始倒计时
     if (this.data.selectRowTimer) {
       clearInterval(this.data.selectRowTimer);
     }
-    
+
     this.data.selectRowTimer = setInterval(() => {
       const newCountdown = this.data.selectRowCountdown - 1;
       this.setData({
         selectRowCountdown: newCountdown
       });
-      
+
       if (newCountdown <= 0) {
         // 倒计时结束，自动选择猪头数最少的行
         this.autoSelectMinBullheadsRow();
@@ -1140,45 +1158,45 @@ Page({
    */
   autoSelectMinBullheadsRow() {
     console.log('[GAME] 倒计时结束，自动选择猪头数最少的行');
-    
+
     // 清除倒计时
     if (this.data.selectRowTimer) {
       clearInterval(this.data.selectRowTimer);
     }
-    
+
     // 找出猪头数最少的行
     const rows = this.data.rows;
     if (rows.length === 0) {
       console.error('[GAME] 没有可选择的行');
       return;
     }
-    
+
     let minBullheads = Infinity;
     let minRowIndex = 0;
-    
+
     rows.forEach((row, index) => {
       if (row.totalBullheads < minBullheads) {
         minBullheads = row.totalBullheads;
         minRowIndex = index;
       }
     });
-    
+
     console.log('[GAME] 自动选择第', minRowIndex + 1, '行，猪头数:', minBullheads);
-    
+
     // 发送选择消息到服务器
     this.sendSocketMsg({
       type: 'selectRow',
       roomId: this.data.roomId,
       rowIndex: minRowIndex
     });
-    
+
     // 关闭弹窗
     this.setData({
       showSelectRowModal: false,
       selectRowCountdown: 30,
       selectedRowIndex: null
     });
-    
+
     wx.showToast({
       title: `自动选择第${minRowIndex + 1}行`,
       icon: 'none'
